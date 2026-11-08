@@ -1,0 +1,16 @@
+# Installed by deploy/deploy.sh into ~/.config/systemd/user/ (systemd user service; %h = home directory).
+# Restart=always with no start limit: after a reboot it retries until the ZeroTier address exists.
+[Unit]
+Description=Laocoon proxy (security layer in front of the LLM) and console
+StartLimitIntervalSec=0
+
+[Service]
+Type=simple
+ExecStart=%h/odysseus-server/current/deploy/service.sh proxy
+Environment=PYTHONUNBUFFERED=1
+Restart=always
+RestartSec=5
+TimeoutStopSec=20
+
+[Install]
+WantedBy=default.target

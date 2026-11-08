@@ -1,0 +1,60 @@
+# Laocoon policy for the AgentDojo "travel" suite (hotel / restaurant / car-rental booking assistant).
+# Same format as policies/eclass.yaml. Written from the tool list alone; no rule names an AgentDojo attacker value.
+#
+#   - one role, `user`; every side effect asks; bookings commit money and are locked;
+#   - listings, reviews, prices, addresses and calendar entries are third-party text: untrusted (G2 + G2b);
+#   - the traveller's own profile (passport, card, bank account) is the app's own data, not untrusted,
+#     but its sensitive fields are masked in the audit log.
+version: 2
+app: agentdojo-travel
+default: deny
+roles: [user]
+
+sensitive_fields: [passport_number, bank_account_number, credit_card_number, ID_number, id_number]
+secret_patterns: []
+honey_records: {values: [], visible_to: []}
+
+approvals:
+  defaults: {read: false, write: true, communicate: true, external: true}
+  roles: {}
+
+guard:
+  max_chars: 1500
+  max_chunks: 8
+
+planner:              # plan commitment (opt-in: eval --planner); the harness sets off_plan per simulated human
+  context: "a travel assistant: hotels, restaurants, car rental, calendar and e-mail"
+
+tools:
+  get_user_information: {effect: read, allow: {user: true}}
+  # ---------------------------------------------------------------- hotels
+  get_all_hotels_in_city:        {effect: read, allow: {user: true}, untrusted_output: {ref: hotels}}
+  get_hotels_prices:             {effect: read, allow: {user: true}, untrusted_output: {ref: hotels}}
+  get_rating_reviews_for_hotels: {effect: read, allow: {user: true}, untrusted_output: {ref: hotel_reviews}}
+  get_hotels_address:            {effect: read, allow: {user: true}, untrusted_output: {ref: hotels}}
+  reserve_hotel:                 {effect: write, allow: {user: true}, locked: true}
+  # ---------------------------------------------------------------- restaurants
+  get_all_restaurants_in_city:   {effect: read, allow: {user: true}, untrusted_output: {ref: restaurants}}
+  get_cuisine_type_for_restaurants: {effect: read, allow: {user: true}, untrusted_output: {ref: restaurants}}
+  get_restaurants_address:       {effect: read, allow: {user: true}, untrusted_output: {ref: restaurants}}
+  get_rating_reviews_for_restaurants: {effect: read, allow: {user: true}, untrusted_output: {ref: restaurant_reviews}}
+  get_dietary_restrictions_for_all_restaurants: {effect: read, allow: {user: true}, untrusted_output: {ref: restaurants}}
+  get_contact_information_for_restaurants: {effect: read, allow: {user: true}, untrusted_output: {ref: restaurants}}
+  get_price_for_restaurants:     {effect: read, allow: {user: true}, untrusted_output: {ref: restaurants}}
+  check_restaurant_opening_hours: {effect: read, allow: {user: true}, untrusted_output: {ref: restaurants}}
+  reserve_restaurant:            {effect: write, allow: {user: true}, locked: true}
+  # ---------------------------------------------------------------- car rental
+  get_all_car_rental_companies_in_city: {effect: read, allow: {user: true}, untrusted_output: {ref: car_rentals}}
+  get_car_types_available:       {effect: read, allow: {user: true}, untrusted_output: {ref: car_rentals}}
+  get_rating_reviews_for_car_rental: {effect: read, allow: {user: true}, untrusted_output: {ref: car_rental_reviews}}
+  get_car_fuel_options:          {effect: read, allow: {user: true}, untrusted_output: {ref: car_rentals}}
+  get_car_rental_address:        {effect: read, allow: {user: true}, untrusted_output: {ref: car_rentals}}
+  get_car_price_per_day:         {effect: read, allow: {user: true}, untrusted_output: {ref: car_rentals}}
+  reserve_car_rental:            {effect: write, allow: {user: true}, locked: true}
+  # ---------------------------------------------------------------- flights, calendar, email
+  get_flight_information:        {effect: read, allow: {user: true}, untrusted_output: {ref: flights}}
+  search_calendar_events:        {effect: read, allow: {user: true}, untrusted_output: {ref: event, id_field: id_}}
+  get_day_calendar_events:       {effect: read, allow: {user: true}, untrusted_output: {ref: event, id_field: id_}}
+  create_calendar_event:         {effect: write, allow: {user: true}}
+  cancel_calendar_event:         {effect: write, allow: {user: true}}
+  send_email:                    {effect: communicate, allow: {user: true}}

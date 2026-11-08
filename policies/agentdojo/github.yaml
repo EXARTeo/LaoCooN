@@ -1,0 +1,66 @@
+# Laocoon policy for AgentDyn's "github" suite (a GitHub account with its mail, local files and web). AgentDyn is a
+# fork of AgentDojo (https://github.com/SaFo-Lab/AgentDyn). Same format as policies/eclass.yaml. Written from the tool
+# list alone; no rule names an AgentDyn attacker value.
+#
+#   - one role, `user`; every side effect asks; credentials, SSH keys, deleting or giving away a repository, adding
+#     collaborators, pushing code out and submitting forms are locked (nobody can switch that approval off);
+#   - visiting or downloading a URL is `external`: the URL itself can carry data out, so it asks like any other egress;
+#   - mail, web pages, files and everything on GitHub that other people write (repository contents, issues, profiles)
+#     is third-party text: untrusted (G2 + G2b). The account's SSH key list is the user's own data.
+version: 2
+app: agentdyn-github
+default: deny
+roles: [user]
+
+sensitive_fields: [password, otp, ssh_key]
+secret_patterns: []
+honey_records: {values: [], visible_to: []}
+
+approvals:
+  defaults: {read: false, write: true, communicate: true, external: true}
+  roles: {}
+
+guard:
+  max_chars: 1500
+  max_chunks: 8
+
+tools:
+  # ---------------------------------------------------------------- account
+  login_github_account:         {effect: write, allow: {user: true}, locked: true}
+  verify_github_account:        {effect: write, allow: {user: true}, locked: true}
+  update_github_account_password: {effect: write, allow: {user: true}, locked: true}
+  get_logged_in_github_user_information: {effect: read, allow: {user: true}, untrusted_output: {ref: github_user}}
+  get_github_account_user_information:   {effect: read, allow: {user: true}, untrusted_output: {ref: github_user}}
+  git_get_linked_ssh_keys:      {effect: read, allow: {user: true}}
+  git_add_ssh_key:              {effect: write, allow: {user: true}, locked: true}
+  git_delete_ssh_key:           {effect: write, allow: {user: true}, locked: true}
+  # ---------------------------------------------------------------- repositories
+  get_github_repository_information: {effect: read, allow: {user: true}, untrusted_output: {ref: repository}}
+  git_create_repo:              {effect: write, allow: {user: true}}
+  git_delete_repo:              {effect: write, allow: {user: true}, locked: true}
+  git_transfer_repo_ownership:  {effect: external, allow: {user: true}, locked: true}
+  git_invite_collaborators:     {effect: external, allow: {user: true}, locked: true}
+  git_push:                     {effect: external, allow: {user: true}, locked: true}
+  git_clone:                    {effect: write, allow: {user: true}}
+  git_pull:                     {effect: write, allow: {user: true}}
+  git_issue:                    {effect: communicate, allow: {user: true}}
+  git_star:                     {effect: write, allow: {user: true}}
+  git_unstar:                   {effect: write, allow: {user: true}}
+  # ---------------------------------------------------------------- email
+  get_github_linked_unread_emails: {effect: read, allow: {user: true}, untrusted_output: {author_field: sender, ref: email, id_field: id_}}
+  get_received_emails:          {effect: read, allow: {user: true}, untrusted_output: {author_field: sender, ref: email, id_field: id_}}
+  get_sent_emails:              {effect: read, allow: {user: true}, untrusted_output: {author_field: sender, ref: email, id_field: id_}}
+  send_email:                   {effect: communicate, allow: {user: true}}
+  # ---------------------------------------------------------------- web
+  browse_webpage:               {effect: external, allow: {user: true}, untrusted_output: {ref: webpage}}
+  input_to_webpage:             {effect: external, allow: {user: true}, locked: true, untrusted_output: {ref: webpage}}
+  download_file_through_url:    {effect: external, allow: {user: true}}
+  download_file_through_id:     {effect: write, allow: {user: true}}
+  # ---------------------------------------------------------------- local files
+  list_directory:               {effect: read, allow: {user: true}, untrusted_output: {ref: directory}}
+  read_file:                    {effect: read, allow: {user: true}, untrusted_output: {ref: file}}
+  create_file:                  {effect: write, allow: {user: true}}
+  create_dir:                   {effect: write, allow: {user: true}}
+  copy_node:                    {effect: write, allow: {user: true}}
+  move_node:                    {effect: write, allow: {user: true}}
+  delete_node:                  {effect: write, allow: {user: true}, locked: true}

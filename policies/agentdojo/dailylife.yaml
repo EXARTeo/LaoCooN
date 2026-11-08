@@ -1,0 +1,58 @@
+# Laocoon policy for AgentDyn's "dailylife" suite (one person's mail, bank account, files, calendar and web). AgentDyn
+# is a fork of AgentDojo (https://github.com/SaFo-Lab/AgentDyn). Same format as policies/eclass.yaml. Written from the
+# tool list alone; no rule names an AgentDyn attacker value.
+#
+#   - one role, `user`; every side effect asks; everything that moves money, deletes or submits a form is locked
+#     (nobody can switch that approval off);
+#   - visiting or downloading a URL is `external`: the URL itself can carry data out, so it asks like any other egress;
+#   - mail, web pages, files and events are third-party text: untrusted (G2 + G2b). The balance is the bank's own data.
+version: 2
+app: agentdyn-dailylife
+default: deny
+roles: [user]
+
+sensitive_fields: [password, otp]
+secret_patterns: []
+honey_records: {values: [], visible_to: []}
+
+approvals:
+  defaults: {read: false, write: true, communicate: true, external: true}
+  roles: {}
+
+guard:
+  max_chars: 1500
+  max_chunks: 8
+
+tools:
+  # ---------------------------------------------------------------- money
+  get_balance:               {effect: read, allow: {user: true}}
+  send_money:                {effect: write, allow: {user: true}, locked: true}
+  verify_transaction:        {effect: write, allow: {user: true}, locked: true}
+  # ---------------------------------------------------------------- email
+  get_unread_emails:         {effect: read, allow: {user: true}, untrusted_output: {author_field: sender, ref: email, id_field: id_}}
+  get_received_emails:       {effect: read, allow: {user: true}, untrusted_output: {author_field: sender, ref: email, id_field: id_}}
+  get_sent_emails:           {effect: read, allow: {user: true}, untrusted_output: {author_field: sender, ref: email, id_field: id_}}
+  search_emails:             {effect: read, allow: {user: true}, untrusted_output: {author_field: sender, ref: email, id_field: id_}}
+  send_email:                {effect: communicate, allow: {user: true}}
+  delete_email:              {effect: write, allow: {user: true}, locked: true}
+  # ---------------------------------------------------------------- web
+  browse_webpage:            {effect: external, allow: {user: true}, untrusted_output: {ref: webpage}}
+  input_to_webpage:          {effect: external, allow: {user: true}, locked: true, untrusted_output: {ref: webpage}}
+  download_file_through_url: {effect: external, allow: {user: true}}
+  download_file_through_id:  {effect: write, allow: {user: true}}
+  # ---------------------------------------------------------------- local files
+  list_directory:            {effect: read, allow: {user: true}, untrusted_output: {ref: directory}}
+  read_file:                 {effect: read, allow: {user: true}, untrusted_output: {ref: file}}
+  create_file:               {effect: write, allow: {user: true}}
+  create_dir:                {effect: write, allow: {user: true}}
+  copy_node:                 {effect: write, allow: {user: true}}
+  move_node:                 {effect: write, allow: {user: true}}
+  delete_node:               {effect: write, allow: {user: true}, locked: true}
+  # ---------------------------------------------------------------- calendar
+  get_current_day:           {effect: read, allow: {user: true}}
+  search_calendar_events:    {effect: read, allow: {user: true}, untrusted_output: {ref: event, id_field: id_}}
+  get_day_calendar_events:   {effect: read, allow: {user: true}, untrusted_output: {ref: event, id_field: id_}}
+  create_calendar_event:     {effect: write, allow: {user: true}}
+  cancel_calendar_event:     {effect: write, allow: {user: true}}
+  reschedule_calendar_event: {effect: write, allow: {user: true}, untrusted_output: {ref: event, id_field: id_}}
+  add_calendar_event_participants: {effect: communicate, allow: {user: true}, untrusted_output: {ref: event, id_field: id_}}

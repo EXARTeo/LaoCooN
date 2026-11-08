@@ -1,0 +1,909 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="icon" type="image/svg+xml" href="__BRAND_ICON__">
+<title data-i18n="title">Policies · __BRAND__</title>
+<style>
+<!--#include _base.css-->
+.bar{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:14px}
+.bar select{max-width:300px}.bar #draft-name{width:200px}
+.bar .status-chips{margin-left:auto;display:flex;gap:6px;flex-wrap:wrap}
+.modebar{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:12px}
+.modebar .file{color:var(--muted);font-size:13px}.modebar .file b{color:var(--ink);font-weight:600}
+.sync{font-size:12.5px;color:var(--muted)}
+.editor-grid{display:grid;grid-template-columns:minmax(0,1fr) 300px;gap:18px;align-items:start}
+.mx-grid{display:grid;grid-template-columns:minmax(0,1fr) 300px;gap:16px;align-items:start}
+@media (max-width:1180px){.editor-grid{grid-template-columns:1fr}.checks{position:static!important}}
+@media (max-width:1000px){.mx-grid{grid-template-columns:1fr}.inspector{position:static}}
+.editor-grid>*,.mx-grid>*{min-width:0}
+/* YAML */
+.code{display:flex;border:1px solid var(--line-strong);border-radius:var(--radius);overflow:hidden;background:var(--panel);height:min(70vh,760px)}
+.code:focus-within{border-color:var(--accent-fill);box-shadow:0 0 0 3px var(--accent-soft)}
+.gutter{flex:none;min-width:46px;padding:10px 0;background:var(--bg-subtle);border-right:1px solid var(--line);color:var(--faint);
+  font:12px/20px var(--mono);text-align:right;overflow:hidden;user-select:none}
+.gutter div{padding:0 9px 0 6px;height:20px;cursor:default}
+.gutter .l-error{color:#0b0b0c;background:var(--deny-fill)}.gutter .l-warning{color:var(--ask);background:var(--ask-soft);font-weight:600}
+.gutter .l-info{color:var(--accent);background:var(--accent-soft)}
+textarea#yaml{flex:1;border:none;border-radius:0;resize:none;padding:10px 12px;font:12.5px/20px var(--mono);white-space:pre;
+  overflow:auto;tab-size:2;background:transparent;box-shadow:none}
+textarea#yaml:focus{box-shadow:none}
+textarea#yaml[readonly]{opacity:.6}
+/* checks */
+.checks{position:sticky;top:76px}
+.checks-head{display:flex;align-items:center;gap:8px;margin-bottom:8px;font-size:13px;color:var(--muted)}.checks-head b{color:var(--ink)}
+.issues{display:flex;flex-direction:column;gap:8px;max-height:min(70vh,760px);overflow:auto}
+.issue{border:1px solid var(--line);border-radius:var(--radius-sm);padding:9px 11px;background:var(--panel);font-size:13px}
+.issue .top{display:flex;gap:6px;align-items:center;margin-bottom:4px;flex-wrap:wrap}
+.issue .path{color:var(--muted);overflow-wrap:anywhere}
+.issue .go{margin-left:auto;display:flex;gap:4px}
+.lvl-error{background:var(--deny-soft);color:var(--deny)}.lvl-warning{background:var(--ask-soft);color:var(--ask)}.lvl-info{background:var(--accent-soft);color:var(--accent)}
+.allclear{display:flex;gap:10px;align-items:center;padding:14px;border:1px solid var(--line);border-radius:var(--radius);color:var(--allow);background:var(--allow-soft);font-size:13px}
+/* visual editor: one grid of switches */
+.editor-grid.one{grid-template-columns:1fr}
+.seg{display:inline-flex;flex-wrap:wrap;border:1px solid var(--line-strong);border-radius:var(--radius-sm);overflow:hidden;background:var(--panel)}
+.seg button{background:none;border:none;padding:5px 12px;font-size:13px;cursor:pointer;color:var(--ink-2);white-space:nowrap}
+.seg button+button{border-left:1px solid var(--line-strong)}
+.seg button:hover{background:var(--hover)}
+.seg button[aria-checked=true]{background:var(--accent-soft);color:var(--accent);font-weight:600}
+.gtop{display:flex;align-items:center;gap:14px;flex-wrap:wrap;margin-bottom:12px}
+.gtop input[type=search]{width:260px}
+.gtop .hint{color:var(--muted);font-size:13px;flex:1;min-width:240px}
+.gwrap{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);overflow:auto}
+table.grid{min-width:520px}
+table.grid th,table.grid td{padding:6px 14px;vertical-align:middle;border-bottom:1px solid var(--line)}
+table.grid thead th{font-size:12.5px;color:var(--muted);font-weight:600;text-align:center;background:var(--panel)}
+table.grid thead th:first-child{text-align:left}
+table.grid td{text-align:center}
+table.grid td.tname{text-align:left;font-weight:500;color:var(--ink)}
+table.grid tbody tr:hover td{background:var(--bg-subtle)}
+table.grid tr.grp td{background:var(--bg-subtle);text-align:left;padding:12px 14px 7px;border-bottom:1px solid var(--line)}
+table.grid tr.grp b{font:600 14px var(--display);color:var(--ink)}
+table.grid tr.grp span{color:var(--muted);font-size:12.5px;margin-left:8px}
+table.grid tr.flash td{animation:flash 1.6s ease-out}@keyframes flash{from{background:var(--accent-soft)}to{background:transparent}}
+table.grid td.askcol,table.grid th.askcol{border-left:1px solid var(--line)}
+.sw{display:inline-flex;align-items:center;justify-content:center;background:none;border:none;padding:4px;cursor:pointer;border-radius:99px}
+.sw .track{width:38px;height:22px;border-radius:99px;background:var(--line-strong);position:relative;transition:background .15s}
+.sw .track::after{content:"";position:absolute;top:3px;left:3px;width:16px;height:16px;border-radius:50%;background:#fff;
+  box-shadow:0 1px 2px rgba(0,0,0,.3);transition:transform .15s}
+.sw[aria-checked=true] .track::after{transform:translateX(16px)}
+.sw.access[aria-checked=true] .track{background:var(--allow-fill)}
+.sw.ask[aria-checked=true] .track{background:var(--ask-fill)}
+.cell{display:inline-flex;align-items:center;gap:6px;min-width:112px;text-align:left}
+.cell small{font-size:12px;color:var(--muted);line-height:1.2;cursor:help;border-bottom:1px dotted var(--faint)}
+.cell.short{min-width:70px}
+.lock{display:inline-flex;color:var(--ask);cursor:help}.lock svg{width:14px;height:14px}
+.idot{width:8px;height:8px;border-radius:50%;display:inline-block;margin-left:7px;vertical-align:1px}
+.idot.error{background:var(--deny-fill)}.idot.warning{background:var(--ask-fill)}
+.empty-form{padding:28px;text-align:center;color:var(--muted);background:var(--panel);border:1px dashed var(--line-strong);border-radius:var(--radius)}
+/* permissions, diff */
+.mx-tools{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px}.mx-tools input[type=search]{flex:1;min-width:180px}
+.chips{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:14px}
+table.mx td,table.mx th{padding:8px 10px}
+table.mx td.tool b{font-family:var(--mono);font-size:12.5px;font-weight:600}
+table.mx td.tool .tags{display:flex;gap:4px;flex-wrap:wrap;margin-top:4px}
+table.mx td.cell{cursor:pointer;white-space:nowrap}
+table.mx td.cell:hover{background:var(--hover)}
+table.mx td.cell.sel{background:var(--accent-soft);box-shadow:inset 0 0 0 1px var(--accent-fill)}
+table.mx .none{color:var(--faint)}
+.acc{display:inline-flex;align-items:center;gap:6px}
+.acc .sq{width:10px;height:10px;border-radius:3px;background:var(--allow-fill)}
+.acc .sq.scoped{background:linear-gradient(135deg,var(--allow-fill) 50%,transparent 50%);border:1px solid var(--allow-fill)}
+.appr{margin-left:6px}
+.inspector{position:sticky;top:76px}
+.inspector dl{display:grid;grid-template-columns:max-content 1fr;gap:6px 14px;margin:12px 0 0;font-size:13px}
+.inspector dt{color:var(--muted)}.inspector dd{margin:0;overflow-wrap:anywhere}
+.diff{font:12px/1.6 var(--mono);border:1px solid var(--line);border-radius:var(--radius);overflow:auto;max-height:70vh;background:var(--panel)}
+.diff div{padding:0 12px;white-space:pre}
+.diff .add{background:var(--allow-soft);color:var(--allow)}.diff .del{background:var(--deny-soft);color:var(--deny)}
+.diff .hunk{color:var(--accent);background:var(--bg-subtle)}.diff .file{color:var(--muted);font-weight:600}
+</style>
+</head>
+<body>
+<!--#include _header.html-->
+<main class="page" data-ctx="__TITLE__">
+  <div class="page-head">
+    <div>
+      <h1 data-i18n="h1">Policies</h1>
+      <p class="lede" data-i18n="lede">Which role can use which tool, with which constraints, and when approval is required.
+        The checks run the same code that enforces the policy.</p>
+    </div>
+    <div class="actions">
+      <button class="btn" id="download" data-i18n="download">Download YAML</button>
+      <button class="btn btn-primary" id="save" data-i18n="save">Save draft</button>
+    </div>
+  </div>
+
+  <p class="note" id="active-note"></p>
+
+  <div class="tabs" role="tablist" style="margin-top:18px">
+    <button role="tab" aria-selected="true" data-tab="edit"><span data-i18n="tab.edit">Edit</span><span class="chip" id="tab-issues" hidden></span></button>
+    <button role="tab" aria-selected="false" data-tab="matrix" data-i18n="tab.matrix">Permissions</button>
+    <button role="tab" aria-selected="false" data-tab="diff" data-i18n="tab.diff">Diff</button>
+  </div>
+
+  <div class="bar">
+    <select id="source" aria-label="Source" data-i18n-aria="source"></select>
+    <button class="btn" id="open" data-i18n="open">Open</button>
+    <span class="muted" style="margin-left:6px" data-i18n="draft">Draft</span>
+    <input id="draft-name" aria-label="Draft name" data-i18n-aria="draft.name" pattern="[A-Za-z0-9][A-Za-z0-9_\-]{0,63}" spellcheck="false">
+    <button class="btn btn-ghost bad" id="delete" data-i18n="delete" hidden>Delete</button>
+    <div class="status-chips" id="status"></div>
+  </div>
+
+  <section data-panel="edit">
+    <div class="modebar">
+      <div class="seg" role="radiogroup" aria-label="Editor" data-i18n-aria="mode" id="mode">
+        <button type="button" role="radio" data-mode="visual" aria-checked="true" data-i18n="mode.visual">Visual editor</button>
+        <button type="button" role="radio" data-mode="yaml" aria-checked="false" data-i18n="mode.yaml">YAML</button>
+      </div>
+      <span class="file"><b id="file-name">—</b></span>
+      <span class="sync" id="sync" role="status"></span>
+    </div>
+    <div class="editor-grid" id="editor-grid">
+      <div>
+        <div id="visual"><div id="form"></div></div>
+        <div id="yamlbox" hidden>
+          <div class="code">
+            <div class="gutter" id="gutter" aria-hidden="true"></div>
+            <textarea id="yaml" spellcheck="false" autocapitalize="off" autocomplete="off" wrap="off" aria-label="Policy (YAML)" data-i18n-aria="yaml"></textarea>
+          </div>
+          <p class="section-sub" style="margin-top:8px" data-i18n="hint">Ctrl+S saves the draft. Tab inserts two spaces. Checks run as you type.</p>
+        </div>
+      </div>
+      <aside class="checks" id="checks">
+        <div class="checks-head"><b data-i18n="checks">Checks</b><span id="check-state"></span></div>
+        <div class="issues" id="issues"></div>
+      </aside>
+    </div>
+  </section>
+
+  <section data-panel="matrix" hidden>
+    <div class="chips" id="summary"></div>
+    <div class="mx-grid">
+      <div>
+        <div class="mx-tools">
+          <input type="search" id="mx-q" placeholder="Search tools" data-i18n-ph="mx.search" data-i18n-aria="mx.search">
+          <select id="mx-role" aria-label="Role" data-i18n-aria="mx.role"><option value="" data-i18n="mx.allroles">All roles</option></select>
+          <select id="mx-effect" aria-label="Type" data-i18n-aria="mx.type"><option value="" data-i18n="mx.alltypes">All types</option></select>
+          <label class="check"><input type="checkbox" id="mx-granted"> <span data-i18n="mx.granted">granted only</span></label>
+        </div>
+        <div class="panel" style="padding:0 4px"><div class="table-wrap" style="max-height:66vh"><table class="mx" id="mx"></table></div></div>
+        <div class="empty" id="mx-empty" hidden></div>
+        <p class="section-sub" style="margin-top:8px;display:flex;gap:14px;flex-wrap:wrap">
+          <span class="acc"><span class="sq"></span> <span data-i18n="legend.full">full access</span></span>
+          <span class="acc"><span class="sq scoped"></span> <span data-i18n="legend.scoped">scoped</span></span>
+          <span><span class="badge b-ask" data-i18n="cell.approval">approval</span> <span data-i18n="legend.approval">asks the user first</span></span>
+          <span>— <span data-i18n="legend.none">not available to the role</span></span></p>
+      </div>
+      <aside class="panel inspector" id="inspector"></aside>
+    </div>
+  </section>
+
+  <section data-panel="diff" hidden>
+    <div class="bar">
+      <span class="muted" data-i18n="diff.with">Compare with</span>
+      <select id="diff-against" aria-label="Compare with" data-i18n-aria="diff.with"></select>
+    </div>
+    <div class="diff" id="diff"></div>
+  </section>
+</main>
+<script>
+<!--#include _common.js-->
+(function () {
+  const API = "__API_BASE__";
+  const {el, toast, t} = Lcn;
+  const $ = id => document.getElementById(id);
+  const api = (path, opts) => Lcn.api(API, path, opts);
+  const NAME_RE = /^[A-Za-z0-9][A-Za-z0-9_-]{0,63}$/;
+  const store = (k, v) => { try { if (v === undefined) return localStorage.getItem(k); localStorage.setItem(k, v); } catch (e) { /* blocked */ } return null; };
+  const S = {catalog: null, templates: [], drafts: [], active: null, source: "t:active", saved: "", analysis: null,
+             seq: 0, tab: "edit", sel: null, loadError: null,
+             mode: store("lcn-policy-mode") === "yaml" ? "yaml" : "visual", data: null,
+             formTimer: null, inflight: null, yamlTimer: null};
+  const ta = $("yaml"), gutter = $("gutter");
+
+  // ------------------------------------------------------------------ labels
+  // English names the identifiers; Greek uses the server's labels (catalog), with the identifier alongside.
+  const greek = () => Lcn.lang === "el";
+  function constraintLabel(c) {
+    const known = (S.catalog && S.catalog.adapter.constraints) || {};
+    return String(c).split(/\s*(?:\||\+)\s*/).map(n => greek() && known[n] ? known[n].label + " (" + n + ")" : n)
+      .join(String(c).includes("|") ? t("or") : t("and"));
+  }
+  function filterLabel(f) {
+    const known = (S.catalog && S.catalog.adapter.filters) || {};
+    return greek() && known[f] ? known[f] + " (" + f + ")" : f;
+  }
+  function effectLabel(e) {
+    if (!greek()) return t("effect." + e) === "effect." + e ? e : t("effect." + e);
+    return (((S.catalog && S.catalog.effects) || []).find(x => x.name === e) || {}).label || e;
+  }
+  const layerLabel = l => (l ? (t("layer." + l) === "layer." + l ? l : t("layer." + l)) : "—");
+  function templateLabel(tpl) {
+    if (tpl.id === "active") return t("tpl.active", {file: S.active ? S.active.name : ""});
+    if (tpl.id === "blank") return t("tpl.blank");
+    return t("tpl.file", {file: tpl.title});
+  }
+  const docLabel = () => S.source.startsWith("d:") ? t("doc.draft", {name: S.source.slice(2)})
+    : S.source === "t:active" ? t("doc.active", {name: S.active ? S.active.name : ""})
+    : templateLabel(S.templates.find(x => "t:" + x.id === S.source) || {id: "blank"});
+  const count = (n, one, many) => n + " " + t(n === 1 ? one : many);
+
+  // ------------------------------------------------------------------ YAML editor
+  const dirty = () => ta.value !== S.saved || !!S.formTimer;
+  function suggestName() {
+    const d = new Date(), p = n => String(n).padStart(2, "0");
+    return "draft-" + d.getFullYear() + p(d.getMonth() + 1) + p(d.getDate()) + "-" + p(d.getHours()) + p(d.getMinutes());
+  }
+  function lineIssues() {
+    const by = {}, rank = {error: 3, warning: 2, info: 1};
+    ((S.analysis && S.analysis.issues) || []).forEach(i => {
+      if (!i.line) return;
+      const cur = by[i.line];
+      if (!cur) by[i.line] = {level: i.level, msgs: [i.message]};
+      else { cur.msgs.push(i.message); if (rank[i.level] > rank[cur.level]) cur.level = i.level; }
+    });
+    return by;
+  }
+  function renderGutter() {
+    const n = ta.value.split("\n").length, marks = lineIssues(), frag = document.createDocumentFragment();
+    for (let i = 1; i <= n; i++) {
+      const d = el("div", marks[i] ? "l-" + marks[i].level : "", i);
+      if (marks[i]) d.title = marks[i].msgs.join("\n");
+      frag.appendChild(d);
+    }
+    gutter.textContent = ""; gutter.appendChild(frag);
+    gutter.scrollTop = ta.scrollTop;
+  }
+  async function gotoLine(n) {
+    if (S.tab !== "edit") showTab("edit");
+    if (S.mode !== "yaml") await setMode("yaml");
+    const lines = ta.value.split("\n");
+    let pos = 0;
+    for (let i = 0; i < n - 1 && i < lines.length; i++) pos += lines[i].length + 1;
+    ta.focus();
+    ta.setSelectionRange(pos, pos + (lines[n - 1] || "").length);
+    ta.scrollTop = Math.max(0, (n - 6) * 20);
+  }
+  ta.addEventListener("scroll", () => { gutter.scrollTop = ta.scrollTop; });
+  ta.addEventListener("input", () => { renderGutter(); renderStatus(); scheduleYaml(); });
+  ta.addEventListener("keydown", e => {
+    if (e.key === "Tab" && !e.shiftKey && !e.ctrlKey && !e.metaKey) { e.preventDefault(); document.execCommand("insertText", false, "  "); }
+  });
+  document.addEventListener("keydown", e => {
+    if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "s") { e.preventDefault(); save(); }
+  });
+  window.addEventListener("beforeunload", e => { if (dirty()) { e.preventDefault(); e.returnValue = ""; } });
+
+  // ------------------------------------------------------------------ analysis (YAML -> data)
+  function scheduleYaml() { clearTimeout(S.yamlTimer); S.yamlTimer = setTimeout(analyse, 350); }
+  async function analyse() {
+    clearTimeout(S.yamlTimer); S.yamlTimer = null;
+    const seq = ++S.seq;
+    $("check-state").textContent = t("checking");
+    try {
+      const res = await api("/policy/analyse", {method: "POST", body: JSON.stringify({yaml: ta.value})});
+      if (seq === S.seq) setAnalysis(res, false);
+    } catch (e) { if (seq === S.seq) { $("check-state").textContent = ""; toast(e.message, "bad"); } }
+  }
+  const isObj = v => v !== null && typeof v === "object" && !Array.isArray(v);
+  const clone = v => JSON.parse(JSON.stringify(v));
+  function setAnalysis(res, fromForm) {
+    S.analysis = res;
+    $("check-state").textContent = "";
+    if (!fromForm) {
+      S.data = isObj(res.data) ? clone(res.data) : null;
+      if (S.mode === "visual") renderForm();
+    } else if (S.mode === "visual") renderForm();
+    layoutChecks();
+    renderIssues(); renderGutter(); renderStatus(); renderMatrix();
+    if (S.tab === "diff") renderDiff();
+  }
+
+  // ------------------------------------------------------------------ form -> YAML
+  // A form edit changes S.data; after a short pause the server writes it into the YAML text (keeping comments and
+  // untouched lines) and returns the checks. Structural edits re-render the section at once.
+  function changed(structural) {
+    if (structural) renderForm();
+    renderStatus();
+    $("sync").textContent = t("sync.pending");
+    clearTimeout(S.formTimer);
+    S.formTimer = setTimeout(formSync, 280);
+  }
+  function formSync() {
+    clearTimeout(S.formTimer); S.formTimer = null;
+    const seq = ++S.seq, body = JSON.stringify({data: S.data, base: ta.value});
+    $("sync").textContent = t("sync.running");
+    const p = api("/policy/analyse", {method: "POST", body}).then(res => {
+      if (seq !== S.seq) return;
+      if (typeof res.yaml === "string") {
+        const top = ta.scrollTop; ta.value = res.yaml; ta.scrollTop = top;
+      }
+      setAnalysis(res, true);
+      $("sync").textContent = t("sync.done");
+    }, e => { if (seq === S.seq) { $("sync").textContent = ""; toast(e.message, "bad"); } });
+    S.inflight = p.finally(() => { if (S.inflight === p) S.inflight = null; });
+    return p;
+  }
+  async function flushForm() {
+    if (S.formTimer) await formSync();
+    else if (S.inflight) await S.inflight;
+  }
+
+  // ------------------------------------------------------------------ data helpers
+  function get(path, dflt) {
+    let v = S.data;
+    for (const k of path) { if (v === null || typeof v !== "object") return dflt; v = v[k]; }
+    return v === undefined ? dflt : v;
+  }
+  function put(path, value) {
+    let o = S.data;
+    for (let i = 0; i < path.length - 1; i++) {
+      if (o[path[i]] === null || typeof o[path[i]] !== "object") o[path[i]] = typeof path[i + 1] === "number" ? [] : {};
+      o = o[path[i]];
+    }
+    o[path[path.length - 1]] = value;
+  }
+  // Delete path; then remove parents left empty, but keep the first `keep` levels.
+  function drop(path, keep) {
+    const parent = get(path.slice(0, -1));
+    if (parent === null || typeof parent !== "object") return;
+    if (Array.isArray(parent)) parent.splice(path[path.length - 1], 1); else delete parent[path[path.length - 1]];
+    for (let d = path.length - 1; d > (keep == null ? 1 : keep); d--) {
+      const v = get(path.slice(0, d));
+      const empty = Array.isArray(v) ? !v.length : isObj(v) && !Object.keys(v).length;
+      if (!empty) break;
+      const up = get(path.slice(0, d - 1));
+      if (Array.isArray(up)) up.splice(path[d - 1], 1); else delete up[path[d - 1]];
+    }
+  }
+
+  // ------------------------------------------------------------------ the visual editor
+  // Only what an operator switches: each role's access to each tool, and whether the tool asks the user first.
+  // Everything else (limits on access, filters, the classifier, private data, …) stays as written; edit it as YAML.
+  const EFFECTS = ["read", "write", "communicate", "external"];
+  const LOCK_SVG = '<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><rect x="3" y="7" width="10" height="7" rx="1.5"/><path d="M5.5 7V5a2.5 2.5 0 0 1 5 0v2"/></svg>';
+  const stash = {};                    // tool -> role -> the access rule a switch removed, restored when switched back
+  const human = n => { const x = String(n).replace(/[_-]+/g, " ").trim(); return x.charAt(0).toUpperCase() + x.slice(1); };
+  const toolNames = () => Object.keys(isObj(get(["tools"])) ? get(["tools"]) : {});
+  const roles = () => {
+    const r = (get(["roles"]) || []).map(String);
+    toolNames().forEach(n => Object.keys((isObj(get(["tools", n, "allow"])) && get(["tools", n, "allow"])) || {})
+      .forEach(x => { if (!r.includes(x)) r.push(x); }));
+    return r;
+  };
+  function effDefault(e) {
+    const d = get(["approvals", "defaults", e]);
+    return typeof d === "boolean" ? d : !!((S.catalog && S.catalog.approval_defaults) || {})[e];
+  }
+  const asks = spec => (typeof spec.approval === "boolean" ? spec.approval : effDefault(spec.effect || "read"));
+  function limits(rule) {               // a short description of a limited grant, for its tooltip
+    return Object.keys(rule).filter(k => k !== "fields").map(k => k + ": " + constraintLabel(Array.isArray(rule[k]) ? rule[k].join(" + ") : rule[k]))
+      .concat(rule.fields ? [t("grid.fields", {f: rule.fields.join(", ")})] : []).join("; ");
+  }
+  function sw(on, cls, label, onChange) {
+    const b = el("button", "sw " + cls); b.type = "button"; b.setAttribute("role", "switch");
+    b.setAttribute("aria-checked", String(!!on)); b.setAttribute("aria-label", label); b.title = label;
+    b.appendChild(el("span", "track"));
+    b.onclick = () => onChange(b.getAttribute("aria-checked") !== "true");
+    return b;
+  }
+
+  function setAccess(tool, role, on) {
+    const ap = ["tools", tool, "allow", role];
+    if (on) {
+      const kept = (stash[tool] || {})[role], allow = get(["tools", tool, "allow"]) || {};
+      allow[role] = kept !== undefined ? kept : true;
+      const ordered = {};                                  // the roles in the policy's order, so the YAML keeps it
+      roles().concat(Object.keys(allow)).forEach(r => { if (r in allow && !(r in ordered)) ordered[r] = allow[r]; });
+      put(["tools", tool, "allow"], ordered);
+    } else {
+      (stash[tool] = stash[tool] || {})[role] = get(ap);
+      drop(ap, 3);
+      if (!isObj(get(["tools", tool, "allow"]))) put(["tools", tool, "allow"], {});
+    }
+    changed(true);
+  }
+  function setAsk(tool, on) {
+    const tp = ["tools", tool], spec = get(tp) || {};
+    if (!on && spec.locked) {
+      if (!confirm(t("grid.unlock", {tool: human(tool)}))) { renderForm(); return; }
+      drop([...tp, "locked"], 2);
+    }
+    if (on === effDefault(spec.effect || "read")) drop([...tp, "approval"], 2); else put([...tp, "approval"], on);
+    changed(true);
+  }
+
+  function toolIssues(name) {
+    return ((S.analysis && S.analysis.issues) || []).filter(i => i.level !== "info" && (i.path || [])[0] === "tools" && i.path[1] === name);
+  }
+  function renderForm() {
+    const form = $("form"), keep = document.activeElement && document.activeElement.dataset.k;
+    const q = (form.querySelector("input[type=search]") || {}).value || "";
+    form.textContent = "";
+    if (!S.data) {
+      const box = el("div", "empty-form");
+      box.appendChild(el("p", "", t(S.analysis ? "form.broken" : "loading")));
+      if (S.analysis) box.appendChild(btn(t("form.toyaml"), "", () => setMode("yaml")));
+      form.appendChild(box);
+      return;
+    }
+    const top = form.appendChild(el("div", "gtop"));
+    const search = el("input"); search.type = "search"; search.placeholder = t("grid.search"); search.value = q;
+    search.setAttribute("aria-label", t("grid.search")); search.oninput = () => drawRows();
+    top.appendChild(search);
+    top.appendChild(el("span", "hint", t("grid.hint")));
+    const rs = roles();
+    const wrap = form.appendChild(el("div", "gwrap"));
+    const tbl = wrap.appendChild(el("table", "grid"));
+    const hr = tbl.appendChild(el("thead")).appendChild(el("tr"));
+    hr.appendChild(el("th", "", t("grid.tool")));
+    rs.forEach(r => hr.appendChild(el("th", "", r)));
+    hr.appendChild(el("th", "askcol", t("grid.ask")));
+    const body = tbl.appendChild(el("tbody"));
+    function drawRows() {
+      body.textContent = "";
+      const qq = search.value.trim().toLowerCase();
+      let shown = 0;
+      EFFECTS.forEach(eff => {
+        const names = toolNames().filter(n => ((get(["tools", n]) || {}).effect || "read") === eff)
+          .filter(n => !qq || n.toLowerCase().includes(qq) || human(n).toLowerCase().includes(qq));
+        if (!names.length) return;
+        const g = body.appendChild(el("tr", "grp")).appendChild(el("td"));
+        g.colSpan = rs.length + 2;
+        g.appendChild(el("b", "", t("grp." + eff)));
+        g.appendChild(el("span", "", t("grp." + eff + ".sub")));
+        names.forEach(name => {
+          shown += 1;
+          const spec = get(["tools", name]) || {}, allow = isObj(spec.allow) ? spec.allow : {};
+          const tr = body.appendChild(el("tr")); tr.dataset.tool = name;
+          const tdn = tr.appendChild(el("td", "tname", human(name))); tdn.title = name;
+          const its = toolIssues(name);
+          if (its.length) { const d = el("span", "idot " + (its.some(i => i.level === "error") ? "error" : "warning")); d.title = its.map(i => i.message).join("\n"); tdn.appendChild(d); }
+          rs.forEach(role => {
+            const rule = allow[role], on = rule === true || isObj(rule);
+            const cell = el("span", "cell");
+            const b = sw(on, "access", t("grid.access", {role, tool: human(name)}), v => setAccess(name, role, v));
+            b.dataset.k = name + "|" + role;
+            cell.appendChild(b);
+            if (isObj(rule) && Object.keys(rule).length) { const sm = el("small", "", t("grid.limited")); sm.title = t("grid.limited.title", {what: limits(rule)}); cell.appendChild(sm); }
+            tr.appendChild(el("td")).appendChild(cell);
+          });
+          const ask = tr.appendChild(el("td", "askcol")).appendChild(el("span", "cell short"));
+          const b = sw(asks(spec), "ask", t("grid.asklabel", {tool: human(name)}), v => setAsk(name, v));
+          b.dataset.k = name + "|ask";
+          ask.appendChild(b);
+          if (spec.locked && asks(spec)) { const l = el("span", "lock"); l.innerHTML = LOCK_SVG; l.title = t("grid.locked"); ask.appendChild(l); }
+        });
+      });
+      if (!shown) { const e = body.appendChild(el("tr")).appendChild(el("td", "muted", t("grid.none"))); e.colSpan = rs.length + 2; }
+    }
+    drawRows();
+    if (keep) { const f = form.querySelector('[data-k="' + CSS.escape(keep) + '"]'); if (f) f.focus(); }
+  }
+  function btn(label, cls, onClick) { const b = el("button", "btn " + (cls || ""), label); b.type = "button"; b.onclick = onClick; return b; }
+  // In the visual editor the checks show only when something needs attention; the YAML view always shows them.
+  function layoutChecks() {
+    const c = (S.analysis && S.analysis.counts) || {};
+    const show = S.mode === "yaml" || !!(c.error || c.warning);
+    $("checks").hidden = !show;
+    $("editor-grid").classList.toggle("one", !show);
+  }
+
+  // ------------------------------------------------------------------ mode switch
+  async function setMode(m) {
+    if (m === S.mode) return;
+    document.querySelectorAll("#mode button").forEach(b => b.setAttribute("aria-checked", String(b.dataset.mode === m)));
+    if (m === "yaml") {
+      ta.readOnly = true;
+      S.mode = m;
+      $("visual").hidden = true; $("yamlbox").hidden = false;
+      await flushForm();
+      ta.readOnly = false;
+      renderGutter();
+    } else {
+      S.mode = m;
+      $("yamlbox").hidden = true; $("visual").hidden = false;
+      if (S.yamlTimer) await analyse(); else renderForm();
+    }
+    store("lcn-policy-mode", m);
+    renderIssues(); layoutChecks();
+  }
+  document.querySelectorAll("#mode button").forEach(b => { b.onclick = () => setMode(b.dataset.mode); });
+
+  // ------------------------------------------------------------------ status, issues
+  function renderStatus() {
+    const box = $("status"); box.textContent = "";
+    const c = (S.analysis && S.analysis.counts) || {error: 0, warning: 0, info: 0};
+    const chip = (cls, text) => box.appendChild(el("span", "chip " + cls, text));
+    if (dirty()) chip("accent", t("status.dirty"));
+    if (c.error) chip("bad", count(c.error, "n.error", "n.errors"));
+    if (c.warning) chip("warn", count(c.warning, "n.warning", "n.warnings"));
+    if (!c.error && !c.warning && S.analysis) chip("ok", t("status.valid"));
+    const n = c.error + c.warning + c.info, tab = $("tab-issues");
+    tab.textContent = n; tab.hidden = !n;
+    tab.className = "chip " + (c.error ? "bad" : c.warning ? "warn" : "");
+  }
+  async function openInForm(path) {
+    if (S.tab !== "edit") showTab("edit");
+    if (S.mode !== "visual") await setMode("visual");
+    const row = document.querySelector('#form tr[data-tool="' + CSS.escape(String(path[1])) + '"]');
+    if (!row) return;
+    row.scrollIntoView({block: "center"});
+    row.classList.remove("flash"); void row.offsetWidth; row.classList.add("flash");
+  }
+  function renderIssues() {
+    const box = $("issues"); box.textContent = "";
+    const items = ((S.analysis && S.analysis.issues) || []).filter(i => S.mode === "yaml" || i.level !== "info");
+    if (!S.analysis) return;
+    if (!items.length) {
+      const ok = el("div", "allclear"); ok.appendChild(el("b", "", "✓")); ok.appendChild(el("span", "", t("allclear")));
+      box.appendChild(ok); return;
+    }
+    items.forEach(i => {
+      const card = el("div", "issue"), top = el("div", "top");
+      top.appendChild(el("span", "badge lvl-" + i.level, t("level." + i.level)));
+      if (i.path && i.path.length) top.appendChild(el("span", "mono path", i.path.join(".")));
+      const go = el("span", "go");
+      if (S.data && (i.path || [])[0] === "tools" && i.path[1]) go.appendChild(btn(t("issue.form"), "btn-sm btn-ghost", () => openInForm(i.path)));
+      if (i.line) go.appendChild(btn(t("line", {n: i.line}), "btn-sm btn-ghost", () => gotoLine(i.line)));
+      top.appendChild(go);
+      card.appendChild(top);
+      card.appendChild(el("div", "", i.message));
+      box.appendChild(card);
+    });
+  }
+
+  // ------------------------------------------------------------------ permissions matrix
+  function renderMatrix() {
+    const mx = S.analysis && S.analysis.matrix, tbl = $("mx"), empty = $("mx-empty"), sumBox = $("summary");
+    tbl.textContent = ""; sumBox.textContent = "";
+    if (!mx) {
+      empty.hidden = !S.analysis; empty.textContent = t("mx.broken");
+      renderInspector(); return;
+    }
+    empty.hidden = true;
+    const s = S.analysis.summary || {};
+    [["sum.tools", s.tools], ["sum.roles", s.roles], ["sum.side", s.side_effects], ["sum.locked", s.locked],
+     ["sum.untrusted", s.untrusted], ["sum.grants", s.grants]].forEach(([k, v]) => {
+      const c = el("span", "chip"); c.appendChild(el("b", "", v == null ? "—" : v)); c.appendChild(document.createTextNode(t(k))); sumBox.appendChild(c);
+    });
+    const ug = el("span", "chip " + (s.unguarded ? "bad" : "ok"));
+    ug.appendChild(el("b", "", s.unguarded || 0)); ug.appendChild(document.createTextNode(t("sum.unguarded"))); sumBox.appendChild(ug);
+
+    const roleSel = $("mx-role"), effSel = $("mx-effect");
+    if (roleSel.options.length - 1 !== mx.roles.length || mx.roles.some((r, i) => roleSel.options[i + 1].value !== r)) {
+      const keep = roleSel.value; roleSel.length = 1;
+      mx.roles.forEach(r => roleSel.appendChild(new Option(r, r)));
+      roleSel.value = mx.roles.includes(keep) ? keep : "";
+    }
+    if (S.catalog) {
+      const keep = effSel.value; effSel.length = 1;
+      S.catalog.effects.forEach(e => effSel.appendChild(new Option(effectLabel(e.name), e.name)));
+      effSel.value = keep;
+    }
+
+    const roles = roleSel.value ? [roleSel.value] : mx.roles;
+    const q = $("mx-q").value.trim().toLowerCase(), eff = effSel.value, granted = $("mx-granted").checked;
+    const head = el("tr"); head.appendChild(el("th", "", t("mx.tool")));
+    roles.forEach(r => head.appendChild(el("th", "", r)));
+    tbl.appendChild(el("thead")).appendChild(head);
+    const body = tbl.appendChild(el("tbody"));
+    let shown = 0;
+    mx.tools.forEach(tool => {
+      if (q && !tool.name.toLowerCase().includes(q)) return;
+      if (eff && tool.effect !== eff) return;
+      if (granted && !roles.some(r => tool.cells[r])) return;
+      shown += 1;
+      const tr = el("tr"), td = el("td", "tool");
+      td.appendChild(el("b", "", tool.name));
+      const tags = el("div", "tags");
+      tags.appendChild(el("span", "tag", effectLabel(tool.effect)));
+      if (tool.locked) tags.appendChild(el("span", "tag", t("tag.locked")));
+      if (tool.untrusted) tags.appendChild(el("span", "tag", t("tag.untrusted")));
+      td.appendChild(tags); tr.appendChild(td);
+      roles.forEach(r => {
+        const c = tool.cells[r], cell = el("td", "cell");
+        if (S.sel && S.sel[0] === tool.name && S.sel[1] === r) cell.classList.add("sel");
+        if (!c) cell.appendChild(el("span", "none", "—"));
+        else {
+          const a = el("span", "acc"); a.appendChild(el("span", "sq" + (c.access === "scoped" ? " scoped" : "")));
+          a.appendChild(document.createTextNode(t(c.access === "full" ? "cell.full" : "cell.scoped")));
+          cell.appendChild(a);
+          if (c.approval) cell.appendChild(el("span", "badge b-ask appr", t("cell.approval")));
+        }
+        cell.onclick = () => { S.sel = [tool.name, r]; renderMatrix(); };
+        tr.appendChild(cell);
+      });
+      body.appendChild(tr);
+    });
+    if (!shown) { empty.hidden = false; empty.textContent = t("mx.nomatch"); }
+    renderInspector();
+  }
+
+  function renderInspector() {
+    const box = $("inspector"); box.textContent = "";
+    const mx = S.analysis && S.analysis.matrix;
+    const tool = mx && S.sel && mx.tools.find(x => x.name === S.sel[0]);
+    if (!tool || !mx.roles.includes(S.sel[1])) {
+      box.appendChild(el("h2", "section-title", t("insp.title")));
+      box.appendChild(el("p", "section-sub", t("insp.pick")));
+      return;
+    }
+    const role = S.sel[1], c = tool.cells[role];
+    box.appendChild(el("h2", "section-title mono", tool.name));
+    box.appendChild(el("p", "section-sub", t("insp.sub", {role, effect: effectLabel(tool.effect)}) + (tool.side_effect ? t("insp.side") : "")));
+    const dl = el("dl");
+    const row = (k, v) => {
+      dl.appendChild(el("dt", "", t(k)));
+      const dd = el("dd"); if (typeof v === "string") dd.textContent = v; else dd.appendChild(v);
+      dl.appendChild(dd);
+    };
+    if (!c) row("insp.access", t("insp.none"));
+    else {
+      row("insp.access", t(c.access === "full" ? "insp.full" : "insp.scoped"));
+      if (c.scope && c.scope.length) {
+        const list = el("div");
+        c.scope.forEach(s => { const d = el("div"); d.appendChild(el("span", "mono", s.arg + ": ")); d.appendChild(document.createTextNode(constraintLabel(s.constraint))); list.appendChild(d); });
+        row("insp.constraints", list);
+      }
+      if (c.fields) row("insp.fields", c.fields.join(", "));
+      if (c.bound && c.bound.length) row("insp.bound", t("insp.boundv", {args: c.bound.join(", ")}));
+      if (c.filters && c.filters.length) row("insp.filters", c.filters.map(filterLabel).join("; "));
+      row("insp.approval", t(c.approval ? "yes" : "no") + ", " + t("insp.setby", {layer: layerLabel(c.layer)}));
+    }
+    box.appendChild(dl);
+    const edit = btn(t("insp.edit"), "btn-sm", () => openInForm(["tools", tool.name]));
+    edit.style.marginTop = "14px"; box.appendChild(edit);
+  }
+  ["mx-q", "mx-role", "mx-effect", "mx-granted"].forEach(id => $(id).addEventListener(id === "mx-q" ? "input" : "change", renderMatrix));
+
+  // ------------------------------------------------------------------ diff
+  let lastDiff = null;
+  async function renderDiff() {
+    await flushForm();
+    try {
+      const res = await api("/policy/diff", {method: "POST", body: JSON.stringify({yaml: ta.value, against: $("diff-against").value})});
+      lastDiff = res.diff; paintDiff();
+    } catch (e) { toast(e.message, "bad"); }
+  }
+  function paintDiff() {
+    const box = $("diff"); box.textContent = "";
+    if (lastDiff == null) return;
+    if (!lastDiff) { const d = el("div", "muted", t("diff.none")); d.style.padding = "12px"; box.appendChild(d); return; }
+    lastDiff.split("\n").forEach(line => {
+      const cls = line.startsWith("+++") || line.startsWith("---") ? "file" : line.startsWith("@@") ? "hunk"
+                : line.startsWith("+") ? "add" : line.startsWith("-") ? "del" : "";
+      box.appendChild(el("div", cls, line || " "));
+    });
+  }
+  $("diff-against").onchange = renderDiff;
+
+  // ------------------------------------------------------------------ tabs
+  function showTab(name) {
+    S.tab = name;
+    document.querySelectorAll(".tabs button").forEach(b => b.setAttribute("aria-selected", String(b.dataset.tab === name)));
+    document.querySelectorAll("[data-panel]").forEach(p => { p.hidden = p.dataset.panel !== name; });
+    if (name === "diff") renderDiff();
+    if (name === "matrix") renderMatrix();
+  }
+  document.querySelectorAll(".tabs button").forEach(b => { b.onclick = () => showTab(b.dataset.tab); });
+
+  // ------------------------------------------------------------------ sources, drafts
+  function renderSources() {
+    const sel = $("source"); sel.textContent = "";
+    const g1 = el("optgroup"); g1.label = t("src.templates");
+    S.templates.forEach(x => g1.appendChild(new Option(templateLabel(x), "t:" + x.id)));
+    sel.appendChild(g1);
+    const g2 = el("optgroup"); g2.label = t(S.drafts.length ? "src.drafts" : "src.nodrafts");
+    S.drafts.forEach(d => g2.appendChild(new Option(d.name + ", " + d.updated.replace("T", " "), "d:" + d.name)));
+    sel.appendChild(g2);
+    sel.value = S.source;
+    const da = $("diff-against"), dk = da.value; da.textContent = "";
+    da.appendChild(new Option(t("diff.active"), "active"));
+    S.drafts.forEach(d => da.appendChild(new Option(t("diff.draft", {name: d.name}), d.name)));
+    da.value = dk && [...da.options].some(o => o.value === dk) ? dk : "active";
+    $("delete").hidden = !S.source.startsWith("d:");
+    $("file-name").textContent = S.active ? docLabel() : "—";
+  }
+  function renderNote() {
+    const note = $("active-note"); note.textContent = "";
+    if (S.loadError) { note.textContent = t(S.loadError[0], S.loadError[1]); return; }
+    if (!S.active) { note.textContent = t("loading"); return; }
+    note.appendChild(document.createTextNode(t("note.active") + " "));
+    note.appendChild(el("span", "mono", S.active.path));
+    note.appendChild(document.createTextNode(". " + t("note.drafts") + " "));
+    note.appendChild(el("span", "mono", S.draftsDir));
+    note.appendChild(document.createTextNode(" " + t("note.never")));
+  }
+  function setDoc(text, source) {
+    clearTimeout(S.formTimer); S.formTimer = null;
+    S.source = source; S.saved = text; ta.value = text; ta.scrollTop = 0;
+    $("draft-name").value = source.startsWith("d:") ? source.slice(2) : suggestName();
+    Object.keys(stash).forEach(k => delete stash[k]);
+    renderSources(); renderGutter(); renderStatus(); analyse();
+  }
+  $("open").onclick = async () => {
+    const v = $("source").value;
+    if (dirty() && !confirm(t("confirm.discard"))) return;
+    try {
+      const d = v.startsWith("d:") ? await api("/policy/drafts/" + encodeURIComponent(v.slice(2)))
+                                   : await api("/policy/templates/" + encodeURIComponent(v.slice(2)));
+      setDoc(d.yaml, v);
+    } catch (e) { toast(e.message, "bad"); }
+  };
+
+  async function save() {
+    const name = $("draft-name").value.trim();
+    if (!NAME_RE.test(name)) { toast(t("toast.badname"), "bad"); $("draft-name").focus(); return; }
+    await flushForm();
+    try {
+      const res = await api("/policy/drafts/" + encodeURIComponent(name), {method: "PUT", body: JSON.stringify({yaml: ta.value}), allow: [422]});
+      if (!res.saved) { setAnalysis(res, false); toast(t("toast.notyaml"), "bad"); return; }
+      S.drafts = res.drafts; S.source = "d:" + name; S.saved = ta.value;
+      S.analysis = res; renderIssues(); renderGutter(); renderStatus(); renderMatrix(); layoutChecks(); renderSources();
+      const e = res.counts.error;
+      toast(e ? t("toast.savedErrors", {n: count(e, "n.error", "n.errors")}) : t("toast.saved"), e ? "bad" : "");
+    } catch (e) { toast(e.message, "bad"); }
+  }
+  $("save").onclick = save;
+
+  $("delete").onclick = async () => {
+    const name = S.source.slice(2);
+    if (!confirm(t("confirm.delete", {name}))) return;
+    try {
+      const res = await api("/policy/drafts/" + encodeURIComponent(name), {method: "DELETE"});
+      S.drafts = res.drafts;
+      setDoc(S.active.yaml || "", "t:active");
+      toast(t("toast.deleted"));
+    } catch (e) { toast(e.message, "bad"); }
+  };
+
+  $("download").onclick = async () => {
+    await flushForm();
+    const name = (S.source.startsWith("d:") ? S.source.slice(2) : $("draft-name").value.trim() || "policy") + ".yaml";
+    const a = el("a"); a.href = URL.createObjectURL(new Blob([ta.value], {type: "text/yaml"})); a.download = name;
+    document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+  };
+
+  // ------------------------------------------------------------------ strings
+  Lcn.init({page: "policies", context: document.querySelector("main").dataset.ctx,
+    onLang: () => { renderNote(); renderSources(); renderStatus(); renderIssues(); renderMatrix(); paintDiff(); if (S.mode === "visual") renderForm(); },
+    dict: {
+      en: {
+        "title": "Policies · {brand}", "h1": "Policies",
+        "lede": "Which role can use which tool, with which constraints, and when approval is required. The checks run the same code that enforces the policy.",
+        "download": "Download YAML", "save": "Save draft", "loading": "Loading…",
+        "note.active": "Active policy:", "note.drafts": "Drafts are saved in",
+        "note.never": "and never change the running policy: a draft takes effect only through a deploy (copy it into the repository under policies/ and push).",
+        "tab.edit": "Edit", "tab.matrix": "Permissions", "tab.diff": "Diff",
+        "source": "Source", "open": "Open", "draft": "Draft", "draft.name": "Draft name", "delete": "Delete",
+        "src.templates": "Templates", "src.drafts": "Drafts", "src.nodrafts": "Drafts (none)",
+        "tpl.active": "Active policy ({file})", "tpl.blank": "Blank policy: everything denied, no tools",
+        "tpl.file": "{file} in the policies folder", "doc.active": "{name} (active)", "doc.draft": "{name}.yaml (draft)",
+        "mode": "Editor", "mode.visual": "Visual editor", "mode.yaml": "YAML", "sections": "Sections",
+        "sync.pending": "Changes not yet in the YAML…", "sync.running": "Writing the YAML…", "sync.done": "YAML updated, comments kept.",
+        "yaml": "Policy (YAML)", "hint": "Ctrl+S saves the draft. Tab inserts two spaces. Checks run as you type.",
+        "checks": "Checks", "checking": "checking…", "issue.form": "Show",
+        "status.dirty": "Unsaved changes", "status.valid": "Valid policy",
+        "n.error": "error", "n.errors": "errors", "n.warning": "warning", "n.warnings": "warnings",
+        "level.error": "Error", "level.warning": "Warning", "level.info": "Info", "line": "line {n}",
+        "allclear": "No problems. The engine loads this policy as is.",
+        "form.broken": "The visual editor needs a policy it can read. The YAML has an error that stops it: fix it in the YAML view.",
+        "form.toyaml": "Open the YAML", "yes": "Yes", "no": "No", "or": " or ", "and": " and ",
+        "grid.search": "Find a tool", "grid.tool": "Tool", "grid.ask": "Ask first",
+        "grid.hint": "Switch a role on to give it the tool. “Ask first” makes the agent wait for the user's OK. Limits, filters and the rest stay as they are.",
+        "grid.access": "{role} can use {tool}", "grid.asklabel": "{tool} asks the user first",
+        "grid.limited": "limited", "grid.limited.title": "Limited to {what}. Edit it in YAML.", "grid.fields": "fields {f}",
+        "grid.locked": "Always asks: no role or user can turn this off.", "grid.none": "No tool matches.",
+        "grid.unlock": "“{tool}” is locked: it always asks first. Stop asking anyway?",
+        "grp.read": "Read", "grp.read.sub": "Looks things up; never changes anything.",
+        "grp.write": "Change", "grp.write.sub": "Changes data.",
+        "grp.communicate": "Communicate", "grp.communicate.sub": "Sends messages or posts.",
+        "grp.external": "External", "grp.external.sub": "Reaches outside the application.",
+        "sum.tools": "tools", "sum.roles": "roles", "sum.side": "with side effects", "sum.locked": "locked",
+        "sum.untrusted": "third-party content", "sum.grants": "grants", "sum.unguarded": "side effects without approval",
+        "mx.search": "Search tools", "mx.role": "Role", "mx.allroles": "All roles", "mx.type": "Type", "mx.alltypes": "All types",
+        "mx.granted": "granted only", "mx.tool": "Tool", "mx.nomatch": "No tools match the filters.",
+        "mx.broken": "The permissions appear once the policy has no structural errors. Fix the errors in the editor.",
+        "cell.full": "full", "cell.scoped": "scoped", "cell.approval": "approval",
+        "tag.locked": "locked", "tag.untrusted": "third-party content",
+        "legend.full": "full access", "legend.scoped": "scoped", "legend.approval": "asks the user first",
+        "legend.none": "not available to the role",
+        "effect.read": "read", "effect.write": "write", "effect.communicate": "communicate", "effect.external": "external",
+        "layer.default": "default", "layer.tool": "tool", "layer.role": "role", "layer.user": "user", "layer.locked": "locked",
+        "insp.title": "Details", "insp.pick": "Select a cell of the table.", "insp.sub": "Role {role}, {effect}",
+        "insp.side": ", has side effects", "insp.access": "Access", "insp.edit": "Edit this tool",
+        "insp.none": "None: the tool does not exist for this role, so the model never even sees it.",
+        "insp.full": "Full", "insp.scoped": "Scoped", "insp.constraints": "Constraints", "insp.fields": "Fields",
+        "insp.bound": "Filled by code", "insp.boundv": "{args} (the signed-in user, hidden from the model)",
+        "insp.filters": "Filters", "insp.approval": "Approval", "insp.setby": "set by: {layer}",
+        "diff.with": "Compare with", "diff.active": "the active policy", "diff.draft": "draft {name}", "diff.none": "No differences.",
+        "confirm.discard": "Unsaved changes will be lost. Continue?", "confirm.delete": "Delete the draft “{name}”?",
+        "toast.badname": "Draft name: letters, digits, - and _ (up to 64).",
+        "toast.notyaml": "Not saved: the text is not valid YAML.",
+        "toast.savedErrors": "Saved with {n}: fix them before deploying.",
+        "toast.saved": "Draft saved. The active policy did not change.", "toast.deleted": "Draft deleted.",
+        "err.load": "Could not load: {msg}",
+      },
+      el: {
+        "title": "Πολιτικές · {brand}", "h1": "Πολιτικές",
+        "lede": "Ποιος ρόλος μπορεί να χρησιμοποιήσει ποιο εργαλείο, με ποιους περιορισμούς και πότε χρειάζεται έγκριση. Ο έλεγχος τρέχει με τον ίδιο κώδικα που εφαρμόζει την πολιτική.",
+        "download": "Λήψη YAML", "save": "Αποθήκευση πρόχειρου", "loading": "Φόρτωση…",
+        "note.active": "Ενεργή πολιτική:", "note.drafts": "Τα πρόχειρα αποθηκεύονται στο",
+        "note.never": "και δεν αλλάζουν ποτέ την πολιτική που τρέχει: ένα πρόχειρο ενεργοποιείται μόνο με deploy (αντιγραφή στο αποθετήριο, στο policies/, και push).",
+        "tab.edit": "Επεξεργασία", "tab.matrix": "Δικαιώματα", "tab.diff": "Διαφορές",
+        "source": "Πηγή", "open": "Άνοιγμα", "draft": "Πρόχειρο", "draft.name": "Όνομα πρόχειρου", "delete": "Διαγραφή",
+        "src.templates": "Πρότυπα", "src.drafts": "Πρόχειρα", "src.nodrafts": "Πρόχειρα (κανένα)",
+        "tpl.active": "Ενεργή πολιτική ({file})", "tpl.blank": "Κενή πολιτική: όλα απαγορεύονται, χωρίς εργαλεία",
+        "tpl.file": "{file} στον φάκελο πολιτικών", "doc.active": "{name} (ενεργή)", "doc.draft": "{name}.yaml (πρόχειρο)",
+        "mode": "Επεξεργαστής", "mode.visual": "Οπτική επεξεργασία", "mode.yaml": "YAML", "sections": "Ενότητες",
+        "sync.pending": "Οι αλλαγές δεν έχουν περάσει ακόμη στο YAML…", "sync.running": "Ενημέρωση του YAML…", "sync.done": "Το YAML ενημερώθηκε, τα σχόλια κρατήθηκαν.",
+        "yaml": "Πολιτική (YAML)", "hint": "Ctrl+S αποθήκευση πρόχειρου. Tab: δύο κενά. Ο έλεγχος τρέχει όσο γράφετε.",
+        "checks": "Έλεγχος", "checking": "έλεγχος…", "issue.form": "Εμφάνιση",
+        "status.dirty": "Μη αποθηκευμένες αλλαγές", "status.valid": "Έγκυρη πολιτική",
+        "n.error": "σφάλμα", "n.errors": "σφάλματα", "n.warning": "προειδοποίηση", "n.warnings": "προειδοποιήσεις",
+        "level.error": "Σφάλμα", "level.warning": "Προειδοποίηση", "level.info": "Πληροφορία", "line": "γραμμή {n}",
+        "allclear": "Κανένα πρόβλημα. Η πολιτική φορτώνεται από τη μηχανή όπως είναι.",
+        "form.broken": "Η οπτική επεξεργασία χρειάζεται πολιτική που μπορεί να διαβάσει. Το YAML έχει σφάλμα που το εμποδίζει: διορθώστε το στην προβολή YAML.",
+        "form.toyaml": "Άνοιγμα του YAML", "yes": "Ναι", "no": "Όχι", "or": " ή ", "and": " και ",
+        "grid.search": "Εύρεση εργαλείου", "grid.tool": "Εργαλείο", "grid.ask": "Ρωτά πρώτα",
+        "grid.hint": "Ενεργοποιήστε έναν ρόλο για να του δώσετε το εργαλείο. Το «Ρωτά πρώτα» κάνει τον agent να περιμένει την έγκριση του χρήστη. Περιορισμοί, φίλτρα και τα υπόλοιπα μένουν όπως είναι.",
+        "grid.access": "Ο ρόλος {role} χρησιμοποιεί το {tool}", "grid.asklabel": "Το {tool} ρωτά πρώτα τον χρήστη",
+        "grid.limited": "με όρια", "grid.limited.title": "Με όριο: {what}. Αλλάζει στο YAML.", "grid.fields": "πεδία {f}",
+        "grid.locked": "Ρωτά πάντα: κανένας ρόλος ή χρήστης δεν μπορεί να το αλλάξει.", "grid.none": "Κανένα εργαλείο δεν ταιριάζει.",
+        "grid.unlock": "Το «{tool}» είναι κλειδωμένο: ρωτά πάντα. Να σταματήσει να ρωτά;",
+        "grp.read": "Ανάγνωση", "grp.read.sub": "Αναζητά στοιχεία· δεν αλλάζει τίποτα.",
+        "grp.write": "Αλλαγές", "grp.write.sub": "Αλλάζει δεδομένα.",
+        "grp.communicate": "Επικοινωνία", "grp.communicate.sub": "Στέλνει μηνύματα ή αναρτήσεις.",
+        "grp.external": "Εξωτερικά", "grp.external.sub": "Φτάνει εκτός της εφαρμογής.",
+        "sum.tools": "εργαλεία", "sum.roles": "ρόλοι", "sum.side": "με παρενέργειες", "sum.locked": "κλειδωμένα",
+        "sum.untrusted": "περιεχόμενο τρίτων", "sum.grants": "παραχωρήσεις", "sum.unguarded": "ενέργειες χωρίς έγκριση",
+        "mx.search": "Αναζήτηση εργαλείου", "mx.role": "Ρόλος", "mx.allroles": "Όλοι οι ρόλοι", "mx.type": "Τύπος", "mx.alltypes": "Όλοι οι τύποι",
+        "mx.granted": "μόνο όσα επιτρέπονται", "mx.tool": "Εργαλείο", "mx.nomatch": "Κανένα εργαλείο δεν ταιριάζει στα φίλτρα.",
+        "mx.broken": "Τα δικαιώματα εμφανίζονται όταν η πολιτική δεν έχει σφάλματα δομής. Διορθώστε τα σφάλματα στην επεξεργασία.",
+        "cell.full": "πλήρης", "cell.scoped": "περιορισμένη", "cell.approval": "έγκριση",
+        "tag.locked": "κλειδωμένο", "tag.untrusted": "περιεχόμενο τρίτων",
+        "legend.full": "πλήρης πρόσβαση", "legend.scoped": "με περιορισμούς", "legend.approval": "ζητά έγκριση από τον χρήστη",
+        "legend.none": "δεν υπάρχει για τον ρόλο",
+        "layer.default": "προεπιλογή", "layer.tool": "εργαλείο", "layer.role": "ρόλος", "layer.user": "χρήστης", "layer.locked": "κλειδωμένο",
+        "insp.title": "Λεπτομέρειες", "insp.pick": "Επιλέξτε ένα κελί του πίνακα.", "insp.sub": "Ρόλος {role}, {effect}",
+        "insp.side": ", με παρενέργειες", "insp.access": "Πρόσβαση", "insp.edit": "Επεξεργασία εργαλείου",
+        "insp.none": "Καμία: το εργαλείο δεν υπάρχει για αυτόν τον ρόλο, το μοντέλο δεν το βλέπει καν.",
+        "insp.full": "Πλήρης", "insp.scoped": "Με περιορισμούς", "insp.constraints": "Περιορισμοί", "insp.fields": "Πεδία",
+        "insp.bound": "Από τον κώδικα", "insp.boundv": "{args} (ο συνδεδεμένος χρήστης, κρυφό από το μοντέλο)",
+        "insp.filters": "Φίλτρα", "insp.approval": "Έγκριση", "insp.setby": "από: {layer}",
+        "diff.with": "Σύγκριση με", "diff.active": "την ενεργή πολιτική", "diff.draft": "το πρόχειρο {name}", "diff.none": "Καμία διαφορά.",
+        "confirm.discard": "Οι αλλαγές που δεν αποθηκεύτηκαν θα χαθούν. Συνέχεια;", "confirm.delete": "Διαγραφή του πρόχειρου «{name}»;",
+        "toast.badname": "Όνομα πρόχειρου: γράμματα, αριθμοί, - και _ (έως 64).",
+        "toast.notyaml": "Δεν αποθηκεύτηκε: το κείμενο δεν είναι έγκυρο YAML.",
+        "toast.savedErrors": "Αποθηκεύτηκε με {n}: διορθώστε τα πριν το deploy.",
+        "toast.saved": "Το πρόχειρο αποθηκεύτηκε. Η ενεργή πολιτική δεν άλλαξε.", "toast.deleted": "Το πρόχειρο διαγράφηκε.",
+        "err.load": "Σφάλμα φόρτωσης: {msg}",
+      },
+    }});
+
+  // ------------------------------------------------------------------ start
+  document.querySelectorAll("#mode button").forEach(b => b.setAttribute("aria-checked", String(b.dataset.mode === S.mode)));
+  $("visual").hidden = S.mode !== "visual"; $("yamlbox").hidden = S.mode !== "yaml";
+  renderNote(); renderInspector(); renderForm(); layoutChecks();
+  (async function init() {
+    try {
+      const d = await api("/policy");
+      S.catalog = d.catalog; S.templates = d.templates; S.drafts = d.drafts; S.active = d.active; S.draftsDir = d.drafts_dir;
+      S.source = "t:active"; S.saved = d.active.yaml || ""; ta.value = S.saved;
+      $("draft-name").value = suggestName();
+      renderNote(); renderSources(); renderGutter();
+      if (d.analysis) setAnalysis(d.analysis, false); else analyse();
+    } catch (e) {
+      if (e.status === 401) return;                                    // on the way to the sign-in page
+      S.loadError = ["err.load", {msg: e.message}];
+      renderNote(); toast(t(S.loadError[0], S.loadError[1]), "bad");
+    }
+  })();
+})();
+</script>
+</body>
+</html>

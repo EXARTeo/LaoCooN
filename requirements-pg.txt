@@ -1,0 +1,3 @@
+# LAOCOON_AUTHZ_SOURCE=views on PostgreSQL (laocoon/views.py)
+psycopg[binary]>=3.2    # runtime: the proxy's connection as the narrow `laocoon` login (LAOCOON_VIEWS_DSN)
+pgserver>=0.1.4         # tests only: a bundled PostgreSQL for tests/test_views_pg.py (or set LAOCOON_TEST_PG_DSN)

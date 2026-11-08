@@ -1,0 +1,241 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="icon" type="image/svg+xml" href="__BRAND_ICON__">
+<title data-i18n="title">__BRAND__ · security for LLM agents</title>
+<style>
+<!--#include _base.css-->
+.hero{display:grid;grid-template-columns:minmax(0,1.6fr) minmax(300px,1fr);gap:36px;align-items:start;margin:8px 0 44px}
+@media (max-width:920px){.hero{grid-template-columns:1fr;gap:24px}}
+.hero>*{min-width:0}
+.hero h1{font:600 38px/1.12 var(--display);letter-spacing:-.01em;max-width:22ch}
+.hero .lede{font-size:15.5px;color:var(--ink-2);margin:16px 0 22px;max-width:62ch;line-height:1.6}
+.hero .actions{display:flex;gap:8px;flex-wrap:wrap}
+@media (max-width:700px){.hero h1{font-size:28px}}
+.access{border-top:4px solid var(--band)}
+.access h2{font-size:15px}.access p{margin:6px 0 14px;color:var(--muted);font-size:13px}
+.access .row .btn{flex:1}
+.block{margin-bottom:44px}
+.block-head{margin-bottom:16px}.block-head h2{font:600 21px/1.2 var(--display)}.block-head p{margin:4px 0 0;color:var(--muted)}
+.layers{display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:1px;background:var(--line);border:1px solid var(--line);
+  border-radius:var(--radius);overflow:hidden}
+.layer{padding:16px 18px;background:var(--panel);display:flex;flex-direction:column}
+.layer .num{font:600 22px/1 var(--display);color:var(--accent)}
+.layer h3{font-size:15px;margin:8px 0 6px}
+.layer p{margin:0 0 12px;color:var(--ink-2);font-size:13px;flex:1}
+.layer .tag{align-self:flex-start}
+.pd{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.1fr);gap:24px;align-items:center;background:var(--panel);
+  border:1px solid var(--line);border-radius:var(--radius);padding:20px 22px}
+@media (max-width:860px){.pd{grid-template-columns:1fr}}
+.pd p{margin:6px 0 0;color:var(--ink-2);font-size:13.5px;max-width:60ch}
+.pd-demo{display:grid;grid-template-columns:auto minmax(0,1fr);gap:8px 14px;align-items:center;font-size:13px;
+  background:var(--bg-subtle);border:1px solid var(--line);border-radius:var(--radius-sm);padding:14px 16px}
+.pd-demo dt{color:var(--muted)}.pd-demo dd{margin:0;overflow-wrap:anywhere}
+.pd-demo .raw{font:12.5px var(--mono);text-decoration:line-through;text-decoration-color:var(--deny);color:var(--muted)}
+.flow{display:flex;flex-wrap:wrap;align-items:center;gap:6px;padding:16px;border:1px solid var(--line);border-radius:var(--radius);background:var(--panel)}
+.flow .step{background:var(--bg-subtle);border:1px solid var(--line);border-radius:var(--radius-sm);padding:6px 10px;font-size:13px}
+.flow .step.check{border-color:var(--accent-fill);color:var(--accent);background:var(--accent-soft);font-weight:500}
+.flow .arrow{color:var(--faint)}
+.metrics td:first-child{color:var(--ink-2)}.metrics td{font-variant-numeric:tabular-nums}
+.metrics td.good{color:var(--allow);font-weight:600}
+footer{max-width:var(--maxw);margin:0 auto;padding:20px 24px 36px;color:var(--muted);font-size:12px;border-top:1px solid var(--line)}
+</style>
+</head>
+<body>
+<!--#include _header.html-->
+<main class="page" data-console="__CONSOLE_URL__" data-policies="__POLICIES_URL__" data-app="__APP_URL__">
+  <div class="hero">
+    <div>
+      <h1 data-i18n="hero.title">The agent can only do what its user could do, and nothing the user didn't ask for.</h1>
+      <p class="lede" data-i18n="hero.lede">__BRAND__ is a deterministic security layer between the application and the LLM.
+        On every message it builds the tools this particular user may use, fills identity arguments from code, asks for
+        approval before any action with side effects, and records everything in a hash-chained log. Rules decide; the
+        classifier can only make them stricter.</p>
+      <div class="actions">
+        <a class="btn btn-primary" id="open-app" data-i18n="hero.app" hidden>Open the application</a>
+        <a class="btn" id="open-console" data-i18n="nav.console">Console</a>
+        <a class="btn" id="open-policies" data-i18n="nav.policies">Policies</a>
+      </div>
+    </div>
+    <section class="panel access" id="access">
+      <h2 id="access-title" data-i18n="access.title">Operator access</h2>
+      <p id="access-text" data-i18n="access.text">Sign in to watch the agent's decisions, stop it, and edit the policies.</p>
+      <div class="row">
+        <a class="btn btn-primary" id="access-signin" data-i18n="access.signin">Sign in</a>
+        <a class="btn" id="access-console" data-i18n="nav.console" hidden>Console</a>
+        <a class="btn" id="access-policies" data-i18n="nav.policies" hidden>Policies</a>
+      </div>
+    </section>
+  </div>
+
+  <section class="block">
+    <div class="block-head"><h2 data-i18n="layers.title">Five layers</h2>
+      <p data-i18n="layers.sub">Each layer stops a different failure; none of them trusts the LLM.</p></div>
+    <div class="layers">
+      <div class="layer"><div class="num">①</div><h3>Deputy Firewall</h3>
+        <p data-i18n="layers.1">The role policy decides which tools exist in each run. Identity arguments are filled by code, not by the model.</p>
+        <span class="tag">policy.py · firewall.py</span></div>
+      <div class="layer"><div class="num">②</div><h3>Siren Guard</h3>
+        <p data-i18n="layers.2">A classifier at checkpoints G1, G2, G2b and G3: input, tool results, before a sensitive action, the answer.</p>
+        <span class="tag">classifier.py</span></div>
+      <div class="layer"><div class="num">③</div><h3>Canary</h3>
+        <p data-i18n="layers.3">A per-conversation canary in the system prompt and decoy honey records: a leak shows up and is cut off.</p>
+        <span class="tag">canary.py</span></div>
+      <div class="layer"><div class="num">④</div><h3>Bound approvals</h3>
+        <p data-i18n="layers.4">Human approval bound (HMAC) to the exact arguments, single use, expiring after 5 minutes.</p>
+        <span class="tag">approvals.py</span></div>
+      <div class="layer"><div class="num">⑤</div><h3>Audit &amp; control</h3>
+        <p data-i18n="layers.5">A hash-chained audit log, a kill switch and a live console for the administrator.</p>
+        <span class="tag">audit.py · killswitch.py</span></div>
+    </div>
+  </section>
+
+  <section class="block">
+    <div class="block-head"><h2 data-i18n="pd.title">Private data never reaches the model</h2></div>
+    <div class="pd">
+      <div>
+        <p data-i18n="pd.text">Declared personal data (AMKA, IBAN, ΑΦΜ, phone, e-mail, ID card, address, date of birth) becomes a typed
+          placeholder before the model or the classifier sees it. Only __BRAND__ maps it back, and only where the role's
+          filters already show the value.</p>
+        <p><span class="tag">private.py</span></p>
+      </div>
+      <dl class="pd-demo" aria-label="Example" data-i18n-aria="pd.example">
+        <dt data-i18n="pd.app">The app holds</dt><dd><span class="raw">AMKA 01019912345</span></dd>
+        <dt data-i18n="pd.model">The model sees</dt><dd><span class="ph">⟦AMKA:6j500h⟧</span></dd>
+        <dt data-i18n="pd.user">The user sees</dt><dd data-i18n="pd.userv">the value, if the role may see it</dd>
+      </dl>
+    </div>
+  </section>
+
+  <section class="block">
+    <div class="block-head"><h2 data-i18n="flow.title">The path of a message</h2>
+      <p data-i18n="flow.sub">Highlighted steps are __BRAND__ checks.</p></div>
+    <div class="flow" aria-label="The path of a message" data-i18n-aria="flow.title">
+      <span class="step" data-i18n="flow.1">User message</span><span class="arrow">→</span>
+      <span class="step check" data-i18n="flow.2">G1 input</span><span class="arrow">→</span>
+      <span class="step check" data-i18n="flow.3">The role's tools</span><span class="arrow">→</span>
+      <span class="step check" data-i18n="flow.ph">Placeholders</span><span class="arrow">→</span>
+      <span class="step">LLM</span><span class="arrow">→</span>
+      <span class="step check" data-i18n="flow.4">Policy gate</span><span class="arrow">→</span>
+      <span class="step check" data-i18n="flow.5">User approval</span><span class="arrow">→</span>
+      <span class="step" data-i18n="flow.6">Tool</span><span class="arrow">→</span>
+      <span class="step check" data-i18n="flow.7">G2 tool result</span><span class="arrow">→</span>
+      <span class="step check" data-i18n="flow.8">G3 answer</span><span class="arrow">→</span>
+      <span class="step" data-i18n="flow.9">User</span>
+    </div>
+  </section>
+
+  <section class="block" id="results">
+    <div class="block-head"><h2 data-i18n="results.title">Evaluation results</h2><p id="results-meta"></p></div>
+    <div class="panel" style="padding:0 6px"><div class="table-wrap"><table class="metrics" id="metrics"></table></div></div>
+    <div class="empty" id="metrics-empty" data-i18n="results.empty" hidden>No evaluation results yet (eval/results/latest.md).</div>
+  </section>
+</main>
+<footer data-i18n="footer">__BRAND__ · a deterministic security layer for LLM agents</footer>
+<script type="application/json" id="metrics-data">__METRICS_JSON__</script>
+<script>
+<!--#include _common.js-->
+(function () {
+  const {el, t} = Lcn;
+  const $ = id => document.getElementById(id);
+  const page = document.querySelector("main").dataset;
+  const m = JSON.parse($("metrics-data").textContent || "{}");
+
+  function renderMetrics() {
+    if (!m.rows || !m.rows.length) { $("results").querySelector(".panel").hidden = true; $("metrics-empty").hidden = false; return; }
+    $("results-meta").textContent = [m.date && t("results.date", {date: m.date}), m.model && t("results.model", {model: m.model}),
+      m.llm === "mock" && t("results.mock"), m.runs && t("results.runs", {n: m.runs})].filter(Boolean).join(" · ");
+    const tbl = $("metrics"); tbl.textContent = "";
+    const head = el("tr"); head.appendChild(el("th", "", t("results.metric")));
+    m.columns.forEach(c => head.appendChild(el("th", "", c)));
+    tbl.appendChild(el("thead")).appendChild(head);
+    const body = tbl.appendChild(el("tbody"));
+    m.rows.forEach(r => {
+      const tr = el("tr");
+      tr.appendChild(el("td", "", r.metric));
+      r.values.forEach((v, i) => tr.appendChild(el("td", i > 0 && /^ASR/.test(r.metric) && /^0%/.test(v) ? "good" : "", v)));
+      body.appendChild(tr);
+    });
+  }
+
+  Lcn.init({page: "home", onLang: () => { renderMetrics(); renderAccess(); }, dict: {
+    en: {
+      "title": "{brand} · security for LLM agents",
+      "hero.title": "The agent can only do what its user could do, and nothing the user didn't ask for.",
+      "hero.lede": "{brand} is a deterministic security layer between the application and the LLM. On every message it builds the tools this particular user may use, fills identity arguments from code, asks for approval before any action with side effects, and records everything in a hash-chained log. Rules decide; the classifier can only make them stricter.",
+      "hero.app": "Open the application",
+      "access.title": "Operator access", "access.text": "Sign in to watch the agent's decisions, stop it, and edit the policies.",
+      "access.signin": "Sign in", "access.in": "Signed in as {user}.", "access.tokenuser": "Signed in with the console token.",
+      "access.open": "This server has no console token or accounts set, so the console is open.",
+      "pd.title": "Private data never reaches the model",
+      "pd.text": "Declared personal data (AMKA, IBAN, ΑΦΜ, phone, e-mail, ID card, address, date of birth) becomes a typed placeholder before the model or the classifier sees it. Only {brand} maps it back, and only where the role's filters already show the value.",
+      "pd.example": "Example", "pd.app": "The app holds", "pd.model": "The model sees", "pd.user": "The user sees",
+      "pd.userv": "the value, if the role may see it", "flow.ph": "Placeholders",
+      "layers.title": "Five layers", "layers.sub": "Each layer stops a different failure; none of them trusts the LLM.",
+      "layers.1": "The role policy decides which tools exist in each run. Identity arguments are filled by code, not by the model.",
+      "layers.2": "A classifier at checkpoints G1, G2, G2b and G3: input, tool results, before a sensitive action, the answer.",
+      "layers.3": "A per-conversation canary in the system prompt and decoy honey records: a leak shows up and is cut off.",
+      "layers.4": "Human approval bound (HMAC) to the exact arguments, single use, expiring after 5 minutes.",
+      "layers.5": "A hash-chained audit log, a kill switch and a live console for the administrator.",
+      "flow.title": "The path of a message", "flow.sub": "Highlighted steps are {brand} checks.",
+      "flow.1": "User message", "flow.2": "G1 input", "flow.3": "The role's tools", "flow.4": "Policy gate",
+      "flow.5": "User approval", "flow.6": "Tool", "flow.7": "G2 tool result", "flow.8": "G3 answer", "flow.9": "User",
+      "results.title": "Evaluation results", "results.metric": "Metric", "results.date": "Last run {date}",
+      "results.model": "model {model}", "results.mock": "scripted model that always obeys the attacker (worst case)",
+      "results.runs": "{n} run(s) per scenario", "results.empty": "No evaluation results yet (eval/results/latest.md).",
+      "footer": "{brand} · a deterministic security layer for LLM agents",
+    },
+    el: {
+      "title": "{brand} · ασφάλεια για LLM agents",
+      "hero.title": "Ο agent κάνει μόνο ό,τι μπορεί να κάνει ο χρήστης του, και τίποτα που δεν ζήτησε.",
+      "hero.lede": "Το {brand} είναι ένα ντετερμινιστικό επίπεδο ασφάλειας ανάμεσα στην εφαρμογή και στο LLM. Σε κάθε μήνυμα χτίζει τα εργαλεία που επιτρέπονται στον συγκεκριμένο χρήστη, συμπληρώνει από κώδικα τα ορίσματα ταυτότητας, ζητά έγκριση για κάθε ενέργεια με συνέπειες και καταγράφει τα πάντα σε αλυσίδα hash. Οι κανόνες αποφασίζουν· ο ταξινομητής μπορεί μόνο να τους κάνει αυστηρότερους.",
+      "hero.app": "Άνοιγμα της εφαρμογής",
+      "access.title": "Πρόσβαση χειριστή", "access.text": "Συνδεθείτε για να βλέπετε τις αποφάσεις για τον agent, να τον σταματάτε και να επεξεργάζεστε τις πολιτικές.",
+      "access.signin": "Σύνδεση", "access.in": "Συνδεδεμένος ως {user}.", "access.tokenuser": "Συνδεδεμένος με το token της κονσόλας.",
+      "access.open": "Ο διακομιστής δεν έχει token κονσόλας ούτε λογαριασμούς, οπότε η κονσόλα είναι ανοιχτή.",
+      "pd.title": "Τα προσωπικά δεδομένα δεν φτάνουν ποτέ στο μοντέλο",
+      "pd.text": "Τα δηλωμένα προσωπικά δεδομένα (ΑΜΚΑ, IBAN, ΑΦΜ, τηλέφωνο, e-mail, ταυτότητα, διεύθυνση, ημερομηνία γέννησης) γίνονται placeholder με τύπο πριν τα δει το μοντέλο ή ο ταξινομητής. Μόνο το {brand} τα αντιστοιχίζει πίσω, και μόνο όπου τα φίλτρα του ρόλου ήδη δείχνουν την τιμή.",
+      "pd.example": "Παράδειγμα", "pd.app": "Η εφαρμογή έχει", "pd.model": "Το μοντέλο βλέπει", "pd.user": "Ο χρήστης βλέπει",
+      "pd.userv": "την τιμή, αν ο ρόλος του επιτρέπεται να τη δει", "flow.ph": "Placeholders",
+      "layers.title": "Πέντε επίπεδα", "layers.sub": "Κάθε επίπεδο σταματά μια διαφορετική αποτυχία· κανένα δεν εμπιστεύεται το LLM.",
+      "layers.1": "Η πολιτική ρόλων αποφασίζει ποια εργαλεία υπάρχουν σε κάθε run. Τα ορίσματα ταυτότητας τα γεμίζει ο κώδικας, όχι το μοντέλο.",
+      "layers.2": "Ταξινομητής στα σημεία G1, G2, G2b και G3: είσοδος, αποτελέσματα εργαλείων, πριν από ευαίσθητη ενέργεια, απάντηση.",
+      "layers.3": "Canary ανά συνομιλία στο system prompt και ψεύτικες εγγραφές-δολώματα: μια διαρροή φαίνεται και κόβεται.",
+      "layers.4": "Έγκριση από τον άνθρωπο δεμένη (HMAC) στα ακριβή ορίσματα, μίας χρήσης, με λήξη σε 5 λεπτά.",
+      "layers.5": "Αρχείο καταγραφής σε αλυσίδα hash, kill switch και ζωντανή κονσόλα για τον διαχειριστή.",
+      "flow.title": "Η διαδρομή ενός μηνύματος", "flow.sub": "Τα τονισμένα βήματα είναι έλεγχοι του {brand}.",
+      "flow.1": "Μήνυμα χρήστη", "flow.2": "G1 είσοδος", "flow.3": "Εργαλεία του ρόλου", "flow.4": "Πύλη πολιτικής",
+      "flow.5": "Έγκριση χρήστη", "flow.6": "Εργαλείο", "flow.7": "G2 αποτέλεσμα", "flow.8": "G3 απάντηση", "flow.9": "Χρήστης",
+      "results.title": "Αποτελέσματα αξιολόγησης", "results.metric": "Μέτρηση", "results.date": "Τελευταία εκτέλεση {date}",
+      "results.model": "μοντέλο {model}", "results.mock": "scripted μοντέλο που υπακούει πάντα στον επιτιθέμενο (χειρότερη περίπτωση)",
+      "results.runs": "{n} εκτέλεση/σενάριο", "results.empty": "Δεν υπάρχουν ακόμη αποτελέσματα αξιολόγησης (eval/results/latest.md).",
+      "footer": "{brand} · ντετερμινιστικό επίπεδο ασφάλειας για LLM agents",
+    },
+  }});
+
+  if (page.app) { $("open-app").href = page.app; $("open-app").hidden = false; }
+  $("open-console").href = Lcn.withToken(page.console);
+  $("open-policies").href = Lcn.withToken(page.policies);
+
+  // Operator access: sign in, or (signed in / open console) straight to the pages.
+  const NAV = Lcn.NAV, signedIn = NAV.user === undefined || !!NAV.user || !!Lcn.token;
+  function renderAccess() {
+    $("access-signin").hidden = signedIn;
+    $("access-console").hidden = $("access-policies").hidden = !signedIn;
+    $("access-console").href = Lcn.withToken(page.console);
+    $("access-policies").href = Lcn.withToken(page.policies);
+    $("access-signin").href = (NAV.login || page.console) + (NAV.login ? "?next=" + encodeURIComponent(page.console) : "");
+    const txt = $("access-text");
+    if (NAV.user === undefined) txt.textContent = t("access.open");
+    else if (NAV.user === "token") txt.textContent = t("access.tokenuser");
+    else if (NAV.user) txt.textContent = t("access.in", {user: NAV.user});
+    else txt.textContent = t("access.text");
+  }
+  renderAccess();
+  renderMetrics();
+})();
+</script>
+</body>
+</html>

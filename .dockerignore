@@ -1,0 +1,9 @@
+.git
+**/__pycache__
+.pytest_cache
+.eval-data
+eval/results
+*.db
+*.db-*
+.env
+deploy/.env

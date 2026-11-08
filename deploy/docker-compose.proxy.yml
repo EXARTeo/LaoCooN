@@ -1,0 +1,70 @@
+# Generalisation demo: the ORIGINAL eClass (commit bb54fc3, zero code changes) behind the Laocoon proxy.
+#   cd LaoCooN && cp deploy/.env.example deploy/.env  (put AI_STUDIO_API_KEY in it)
+#   docker compose -f deploy/docker-compose.proxy.yml --env-file deploy/.env up --build
+#   http://localhost:8081                         original eClass, protected
+#   http://localhost:9000/laocoon?token=...        proxy console
+services:
+  laocoon-proxy:
+    build: {context: .., dockerfile: deploy/proxy.Dockerfile}
+    ports: ["9000:9000"]
+    environment:
+      LAOCOON_ENABLED: ${LAOCOON_ENABLED:-true}
+      LAOCOON_POLICY: /srv/policies/eclass.yaml
+      LAOCOON_DB: /laocoon-data/laocoon.db
+      LAOCOON_SECRET: ${LAOCOON_SECRET:?set LAOCOON_SECRET to a random value of at least 32 characters}
+      LAOCOON_APP_KEY: ${LAOCOON_APP_KEY:-lcn-demo-key}         # the "API key" the app is given
+      LAOCOON_IDENTITY: system_prompt                            # demo; production: signed_header
+      # db: read-only handle on the eClass DB (below) · lookup: no database, facts through eClass's own read tools
+      # (seamless; with lookup the eclass-original-data volume can be removed from this service) · views: only the
+      # policy's data_model views (SQLite: TEMP views + an authorizer on the file below; PostgreSQL: LAOCOON_VIEWS_DSN,
+      # the database enforces it)
+      LAOCOON_AUTHZ_SOURCE: ${LAOCOON_AUTHZ_SOURCE:-db}
+      LAOCOON_ECLASS_DB: /eclass-data/eclass.db                  # read-only, for resource checks (db and views)
+      LAOCOON_VIEWS_DSN: ${LAOCOON_VIEWS_DSN:-}                  # views on PostgreSQL (needs psycopg in the image)
+      # authzen: the customer's AuthZEN 1.0 policy decision point (https://; no database at all)
+      LAOCOON_AUTHZEN_PDP: ${LAOCOON_AUTHZEN_PDP:-}
+      LAOCOON_AUTHZEN_TOKEN: ${LAOCOON_AUTHZEN_TOKEN:-}
+      LAOCOON_UPSTREAM_BASE_URL: https://generativelanguage.googleapis.com/v1beta/openai
+      LAOCOON_UPSTREAM_API_KEY: ${AI_STUDIO_API_KEY}
+      LAOCOON_UPSTREAM_MODEL: ${GEMINI_MODEL:-gemini-3.5-flash-lite}
+      LAOCOON_CONSOLE_TOKEN: ${LAOCOON_CONSOLE_TOKEN:-change-me-console}
+      LAOCOON_CONSOLE_USERS: ${LAOCOON_CONSOLE_USERS:-}
+      # ② Siren Guard: jev | openai | hf | off (off unless a key or a backend is given; empty = backend defaults)
+      LAOCOON_GUARD_BACKEND: ${LAOCOON_GUARD_BACKEND:-}
+      LAOCOON_GUARD_MODEL: ${LAOCOON_GUARD_MODEL:-${GUARD_MODEL:-}}
+      LAOCOON_GUARD_BASE_URL: ${LAOCOON_GUARD_BASE_URL:-}
+      LAOCOON_GUARD_API_KEY: ${LAOCOON_GUARD_API_KEY:-${TYPESAFE_API_KEY:-}}
+      LAOCOON_GUARD_TIMEOUT: ${LAOCOON_GUARD_TIMEOUT:-}
+      LAOCOON_GUARD_LABELS: ${LAOCOON_GUARD_LABELS:-}
+      LAOCOON_GUARD_POINTS: ${LAOCOON_GUARD_POINTS:-}
+      LAOCOON_GUARD_HF_POINTS: ${LAOCOON_GUARD_HF_POINTS:-}
+      LAOCOON_GUARD_HF_MODEL: ${LAOCOON_GUARD_HF_MODEL:-}
+      LAOCOON_GUARD_HF_LANGS: ${LAOCOON_GUARD_HF_LANGS:-}
+      LAOCOON_GUARD_JEV_TIMEOUT: ${LAOCOON_GUARD_JEV_TIMEOUT:-}
+      LAOCOON_MEMORY: ${LAOCOON_MEMORY:-off}                  # ⑥ attack memory, opt-in
+      LAOCOON_MEMORY_AUTOCONFIRM: ${LAOCOON_MEMORY_AUTOCONFIRM:-canary,honey}
+      LAOCOON_MEMORY_TTL_DAYS: ${LAOCOON_MEMORY_TTL_DAYS:-90}
+    volumes:
+      - ../laocoon:/srv/laocoon
+      - ../policies:/srv/policies
+      - eclass-original-data:/eclass-data:ro
+      - laocoon-proxy-data:/laocoon-data
+
+  eclass-original:
+    build: ../../eclass-original                                  # the original Dockerfile, unchanged
+    ports: ["8081:8080"]
+    environment:                                                  # the ONLY changes: settings, not code
+      LLM_PROVIDER: openai
+      LLM_BASE_URL: http://laocoon-proxy:9000/v1
+      LLM_API_KEY: ${LAOCOON_APP_KEY:-lcn-demo-key}
+      LLM_MODEL: ${GEMINI_MODEL:-gemini-3.5-flash-lite}
+      SECRET_KEY: ${SECRET_KEY:-change-me-hackathon}
+      DB_PATH: /data/eclass.db
+    volumes:
+      - eclass-original-data:/data
+      - ../eval:/srv/eval                                         # only for the eval harness
+    depends_on: [laocoon-proxy]
+
+volumes:
+  eclass-original-data:
+  laocoon-proxy-data:

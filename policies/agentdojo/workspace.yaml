@@ -1,0 +1,60 @@
+# Laocoon policy for the AgentDojo "workspace" suite (email, calendar, cloud drive of one office user).
+# Same format as policies/eclass.yaml (see its header). Written the way an operator would write it for a
+# personal-assistant deployment, from the tool list alone: no rule names an AgentDojo attacker value.
+#
+#   - one role, `user`: the agent acts for the mailbox owner and has every tool of the suite;
+#   - every side effect asks (approvals.defaults); destructive or data-sharing tools are locked;
+#   - every result that carries third-party text (mail, events, files, contacts) is untrusted: it is
+#     classified (G2), attributed to its source and counted by G2b. The user's own items are not exempted:
+#     a shared file or an event someone else edited is attacker-writable;
+#   - a write that returns the stored object (the event after adding participants, the file after appending,
+#     deleting or sharing) returns that third-party text too, so its result is untrusted as well. Only the tools
+#     that echo what the agent itself just wrote (create_*, send_email) are not.
+version: 2
+app: agentdojo-workspace
+default: deny
+roles: [user]
+
+sensitive_fields: [password, security_code]
+secret_patterns: []
+honey_records: {values: [], visible_to: []}
+
+approvals:
+  defaults: {read: false, write: true, communicate: true, external: true}
+  roles: {}
+
+guard:
+  max_chars: 1500     # chunk size the local hf model (512 tokens) can read whole; the worst chunk decides
+  max_chunks: 8
+
+planner:              # plan commitment (opt-in: eval --planner); the harness sets off_plan per simulated human
+  context: "an office assistant: e-mail, calendar and cloud drive of one user"
+
+tools:
+  # ---------------------------------------------------------------- email
+  get_unread_emails:   {effect: read, allow: {user: true}, untrusted_output: {author_field: sender, ref: email, id_field: id_}}
+  get_received_emails: {effect: read, allow: {user: true}, untrusted_output: {author_field: sender, ref: email, id_field: id_}}
+  get_sent_emails:     {effect: read, allow: {user: true}, untrusted_output: {author_field: sender, ref: email, id_field: id_}}
+  get_draft_emails:    {effect: read, allow: {user: true}, untrusted_output: {author_field: sender, ref: email, id_field: id_}}
+  search_emails:       {effect: read, allow: {user: true}, untrusted_output: {author_field: sender, ref: email, id_field: id_}}
+  search_contacts_by_name:  {effect: read, allow: {user: true}, untrusted_output: {ref: contact, id_field: email}}
+  search_contacts_by_email: {effect: read, allow: {user: true}, untrusted_output: {ref: contact, id_field: email}}
+  send_email:          {effect: communicate, allow: {user: true}}
+  delete_email:        {effect: write, allow: {user: true}, locked: true}
+  # ---------------------------------------------------------------- calendar
+  get_current_day:     {effect: read, allow: {user: true}}
+  search_calendar_events:  {effect: read, allow: {user: true}, untrusted_output: {ref: event, id_field: id_}}
+  get_day_calendar_events: {effect: read, allow: {user: true}, untrusted_output: {ref: event, id_field: id_}}
+  create_calendar_event:   {effect: write, allow: {user: true}}
+  cancel_calendar_event:   {effect: write, allow: {user: true}}
+  reschedule_calendar_event: {effect: write, allow: {user: true}, untrusted_output: {ref: event, id_field: id_}}
+  add_calendar_event_participants: {effect: communicate, allow: {user: true}, untrusted_output: {ref: event, id_field: id_}}
+  # ---------------------------------------------------------------- cloud drive
+  list_files:          {effect: read, allow: {user: true}, untrusted_output: {author_field: owner, ref: file, id_field: id_}}
+  search_files:        {effect: read, allow: {user: true}, untrusted_output: {author_field: owner, ref: file, id_field: id_}}
+  search_files_by_filename: {effect: read, allow: {user: true}, untrusted_output: {author_field: owner, ref: file, id_field: id_}}
+  get_file_by_id:      {effect: read, allow: {user: true}, untrusted_output: {author_field: owner, ref: file, id_field: id_}}
+  create_file:         {effect: write, allow: {user: true}}
+  append_to_file:      {effect: write, allow: {user: true}, untrusted_output: {author_field: owner, ref: file, id_field: id_}}
+  delete_file:         {effect: write, allow: {user: true}, locked: true, untrusted_output: {author_field: owner, ref: file, id_field: id_}}
+  share_file:          {effect: external, allow: {user: true}, locked: true, untrusted_output: {author_field: owner, ref: file, id_field: id_}}

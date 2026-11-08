@@ -1,0 +1,501 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="icon" type="image/svg+xml" href="__BRAND_ICON__">
+<title data-i18n="title">Console · __BRAND__</title>
+<style>
+<!--#include _base.css-->
+.weakbar{display:flex;align-items:center;gap:12px;flex-wrap:wrap;background:var(--deny-soft);color:var(--deny);border:1px solid var(--deny);
+  border-radius:var(--radius);padding:10px 14px;margin-bottom:14px;font-weight:500}
+.weakbar .wb-text{flex:1;min-width:200px}.weakbar .btn{color:var(--deny);border-color:var(--deny)}
+.ledger{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:18px 28px;align-items:center;background:var(--panel);
+  border:1px solid var(--line);border-radius:var(--radius);padding:18px 20px;margin-bottom:22px}
+.ledger-bar{display:flex;gap:2px;height:14px;border-radius:4px;overflow:hidden;background:var(--bg-subtle)}
+.ledger-bar span{min-width:3px;transition:flex-grow .4s ease}
+.ledger-bar span:first-child{border-radius:4px 0 0 4px}.ledger-bar span:last-child{border-radius:0 4px 4px 0}
+.ledger-bar .allow{background:var(--allow-fill)}.ledger-bar .ask{background:var(--ask-fill)}.ledger-bar .deny{background:var(--deny-fill)}.ledger-bar .kill{background:var(--kill)}
+.ledger-empty{font-size:12px;color:var(--muted);margin-top:6px}
+.keys{display:flex;flex-wrap:wrap;gap:6px 26px;margin-top:12px}
+.key{display:grid;grid-template-columns:auto auto;column-gap:8px;align-items:baseline;background:none;border:none;padding:4px 6px;
+  margin:-4px -6px;border-radius:var(--radius-sm);cursor:pointer;text-align:left;color:var(--ink)}
+.key:hover{background:var(--hover)}.key[aria-pressed=true]{background:var(--accent-soft)}
+.key .sw{width:10px;height:10px;border-radius:3px;align-self:center}
+.key .k{font-size:12.5px;color:var(--muted)}
+.key b{grid-column:2;font:600 26px/1.1 var(--display);font-variant-numeric:tabular-nums}
+.key .pct{grid-column:2;font-size:12px;color:var(--muted);font-variant-numeric:tabular-nums}
+.sw.allow{background:var(--allow-fill)}.sw.ask{background:var(--ask-fill)}.sw.deny{background:var(--deny-fill)}.sw.kill{background:var(--kill)}
+.facts{display:grid;grid-template-columns:auto auto;gap:6px 16px;font-size:13px;border-left:1px solid var(--line);padding-left:24px;align-self:stretch;align-content:center}
+.facts dt{color:var(--muted)}.facts dd{margin:0;font-weight:500;overflow-wrap:anywhere}
+.facts .n{font:600 18px/1.1 var(--display);font-variant-numeric:tabular-nums}
+@media (max-width:900px){.ledger{grid-template-columns:1fr}.facts{border-left:none;padding-left:0;border-top:1px solid var(--line);padding-top:14px}}
+.grid{display:grid;grid-template-columns:minmax(0,2.3fr) minmax(300px,1fr);gap:20px;align-items:start}
+@media (max-width:1040px){.grid{grid-template-columns:1fr}}
+.grid>*{min-width:0}
+.events{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);padding:16px 18px 6px}
+.toolbar{display:flex;gap:8px;flex-wrap:wrap;margin:12px 0 6px}.toolbar input[type=search]{flex:1;min-width:180px}
+td.reason{min-width:200px;overflow-wrap:anywhere}td.reason .mono{margin-top:3px;color:var(--muted)}
+td.tool .mono{white-space:nowrap}td.rule .mono{white-space:nowrap}td.user b{font-weight:500}
+#events td:first-child{box-shadow:inset 3px 0 0 transparent}
+#events tr[data-action=allow] td:first-child{box-shadow:inset 3px 0 0 var(--allow-fill)}
+#events tr[data-action=ask] td:first-child{box-shadow:inset 3px 0 0 var(--ask-fill)}
+#events tr[data-action=deny] td:first-child{box-shadow:inset 3px 0 0 var(--deny-fill)}
+#events tr[data-action=kill] td:first-child{box-shadow:inset 4px 0 0 var(--kill)}
+.st-input,.st-result,.st-reply,.st-guard{color:var(--accent)}.st-scan,.st-canary{color:var(--ask)}.st-console,.st-policy{color:var(--muted)}
+.sev-high,.sev-critical{color:var(--deny);font-weight:600}.sev-medium{color:var(--ask)}
+tr.new td{animation:flash 1.6s ease-out}@keyframes flash{from{background:var(--accent-soft)}to{background:transparent}}
+.rail .panel{padding:16px}
+.killbox{border-top:4px solid var(--kill)}
+.kill-row{display:grid;grid-template-columns:auto 1fr auto;gap:8px;margin-top:10px}
+.kill-active{border-color:var(--kill);background:var(--kill-soft)}
+.count{font:600 12px/1 var(--font);background:var(--chip);color:var(--muted);border-radius:99px;padding:3px 8px;margin-left:6px;vertical-align:2px}
+.count.on{background:var(--ask-soft);color:var(--ask)}
+.mem-facts{display:grid;grid-template-columns:auto 1fr;gap:4px 12px;font-size:12.5px;margin:0 0 12px}
+.mem-facts dt{color:var(--muted)}.mem-facts dd{margin:0;font-variant-numeric:tabular-nums}
+.mem-group{font-size:12.5px;color:var(--muted);margin:14px 0 6px}
+.mem-actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:8px}
+</style>
+</head>
+<body>
+<!--#include _header.html-->
+<main class="page" data-ctx="__TITLE__">
+  <div class="page-head">
+    <div>
+      <h1 data-i18n="h1">Console</h1>
+      <p class="lede" data-i18n="lede">Every __BRAND__ decision in real time: what was allowed, what needed approval and what
+        was stopped. The audit log is a hash chain, so any tampering shows up on verification.</p>
+    </div>
+    <div class="actions">
+      <span class="status" id="live"><span class="dot"></span><span>Connecting…</span></span>
+      <button class="btn" id="verify" data-i18n="verify">Verify chain</button>
+      <a class="btn" id="export" href="#" download data-i18n="export">Export JSONL</a>
+    </div>
+  </div>
+
+  <div class="weakbar" id="weakbar" role="status" hidden>
+    <span class="wb-text" id="weak-text"></span>
+    <a class="btn btn-sm" id="weak-link" data-i18n="weak.open">Open mitigations</a>
+  </div>
+
+  <section class="ledger" aria-label="Summary" data-i18n-aria="summary">
+    <div>
+      <div class="ledger-bar" id="bar" role="img"></div>
+      <div class="ledger-empty" id="bar-empty" data-i18n="bar.empty" hidden>No decisions yet.</div>
+      <div class="keys" id="keys">
+        <button class="key" data-k="allow" type="button" aria-pressed="false"><span class="sw allow"></span><span class="k" data-i18n="n.allow">Allowed</span><b id="n-allow">0</b><span class="pct" id="p-allow"></span></button>
+        <button class="key" data-k="ask" type="button" aria-pressed="false"><span class="sw ask"></span><span class="k" data-i18n="n.ask">Asked for approval</span><b id="n-ask">0</b><span class="pct" id="p-ask"></span></button>
+        <button class="key" data-k="deny" type="button" aria-pressed="false"><span class="sw deny"></span><span class="k" data-i18n="n.deny">Denied</span><b id="n-deny">0</b><span class="pct" id="p-deny"></span></button>
+        <button class="key" data-k="kill" type="button" aria-pressed="false"><span class="sw kill"></span><span class="k" data-i18n="n.kill">Killed</span><b id="n-kill">0</b><span class="pct" id="p-kill"></span></button>
+      </div>
+    </div>
+    <dl class="facts">
+      <dt data-i18n="n.flags">Open flags</dt><dd><span class="n" id="n-flags">0</span></dd>
+      <dt>② Siren Guard</dt><dd id="classifier">—</dd>
+      <dt data-i18n="chain">Audit chain</dt><dd id="verify-out" class="muted" data-i18n="chain.unchecked">Not verified yet</dd>
+    </dl>
+  </section>
+
+  <div class="grid">
+    <section class="events">
+      <div class="panel-head" style="margin-bottom:0">
+        <div><h2 class="section-title" data-i18n="events">Events</h2>
+          <p class="section-sub" data-i18n="events.sub">Newest first, refreshed every 2 seconds.</p></div>
+      </div>
+      <div class="toolbar">
+        <input type="search" id="q" placeholder="Search by user, tool, rule or reason" data-i18n-ph="search" data-i18n-aria="search">
+        <select id="f-action" aria-label="Decision" data-i18n-aria="th.decision">
+          <option value="" data-i18n="f.all">All decisions</option><option value="!allow" data-i18n="f.notallow">All but allow</option>
+          <option value="allow">allow</option><option value="ask">ask</option><option value="deny">deny</option>
+          <option value="kill">kill</option>
+        </select>
+      </div>
+      <div class="table-wrap"><table>
+        <thead><tr><th>#</th><th data-i18n="th.time">Time</th><th data-i18n="th.user">User</th><th data-i18n="th.tool">Tool and stage</th>
+          <th data-i18n="th.decision">Decision</th><th data-i18n="th.rule">Rule</th><th data-i18n="th.reason">Reason</th></tr></thead>
+        <tbody id="events"></tbody>
+      </table></div>
+      <div class="empty" id="events-empty" style="padding:10px 0 14px"></div>
+    </section>
+
+    <div class="stack rail">
+      <section class="panel killbox">
+        <h2 class="section-title">Kill switch</h2>
+        <p class="section-sub" style="margin-bottom:12px" data-i18n="kill.sub">Stops agent actions immediately, for everyone or targeted.</p>
+        <button class="btn btn-kill" id="kill-global" style="width:100%" data-i18n="kill.all">Stop all agent actions</button>
+        <div class="kill-row">
+          <select id="kill-scope" aria-label="Scope" data-i18n-aria="kill.scope"><option value="user" data-i18n="kill.user">user id</option><option value="tool" data-i18n="kill.tool">tool</option></select>
+          <input id="kill-key" placeholder="e.g. 9 or send_message" data-i18n-ph="kill.key" aria-label="Key" data-i18n-aria="kill.keylabel">
+          <button class="btn" id="kill-one" data-i18n="kill.one">Stop</button>
+        </div>
+        <div id="kills" style="margin-top:12px"></div>
+      </section>
+      <section class="panel">
+        <h2 class="section-title"><span data-i18n="pending">Pending approvals</span><span class="count" id="c-pending">0</span></h2>
+        <p class="section-sub" style="margin-bottom:10px" data-i18n="pending.sub">Actions waiting for the user's approval in the chat.</p>
+        <div id="pending"></div>
+      </section>
+      <section class="panel">
+        <h2 class="section-title"><span data-i18n="flags">Flagged content</span><span class="count" id="c-flags">0</span></h2>
+        <p class="section-sub" style="margin-bottom:10px" data-i18n="flags.sub">Conversations stopped by a canary or honey-record hit.</p>
+        <div id="flags"></div>
+      </section>
+      <section class="panel" id="memory-panel" hidden>
+        <h2 class="section-title"><span data-i18n="mem">⑥ Attack memory</span><span class="count" id="c-mem">0</span></h2>
+        <p class="section-sub" style="margin-bottom:10px" data-i18n="mem.sub">Attacks a tripwire or a person confirmed. Copies and variants are stopped before the model reads them.</p>
+        <dl class="mem-facts" id="mem-facts"></dl>
+        <div id="mem-candidates"></div>
+        <div id="mem-known"></div>
+      </section>
+    </div>
+  </div>
+</main>
+<script>
+<!--#include _common.js-->
+(function () {
+  const API = "__API_BASE__";
+  const {el, toast, t} = Lcn;
+  const PH = /⟦([A-Za-z][A-Za-z0-9_]{0,31}):([0-9a-z]{6,12})⟧/g;   // private_data placeholders
+  function chips(node, text) {           // text nodes and spans only: never innerHTML
+    text = String(text || ""); let last = 0;
+    for (const m of text.matchAll(PH)) {
+      node.appendChild(document.createTextNode(text.slice(last, m.index)));
+      const s = el("span", "ph", m[1]); s.title = m[0]; node.appendChild(s);
+      last = m.index + m[0].length;
+    }
+    node.appendChild(document.createTextNode(text.slice(last)));
+    return node;
+  }
+  const $ = id => document.getElementById(id);
+  const api = (path, opts) => Lcn.api(API, path, opts);
+  let after = 0, failures = 0, last = null, liveState = ["", "live.connecting"], verified = null;
+
+  function setLive(state, key) {
+    liveState = [state, key];
+    $("live").firstChild.className = "dot " + state;
+    $("live").lastChild.textContent = t(key);
+  }
+
+  function matches(tr) {
+    const f = $("f-action").value, q = $("q").value.trim().toLowerCase();
+    const a = tr.dataset.action;
+    if (f === "!allow" ? a === "allow" : f && a !== f) return false;
+    return !q || tr.dataset.text.includes(q);
+  }
+  function applyFilters() {
+    let shown = 0;
+    document.querySelectorAll("#events tr").forEach(tr => { tr.hidden = !matches(tr); shown += !tr.hidden; });
+    const box = $("events-empty");
+    box.hidden = shown > 0;
+    box.textContent = t($("events").children.length ? "events.nomatch" : "events.none");
+  }
+
+  function addEvent(ev, fresh) {
+    const tr = el("tr", fresh ? "new" : "");
+    tr.dataset.action = ev.action || "";
+    tr.dataset.text = [ev.username, ev.role, ev.tool, ev.rule, ev.reason, ev.stage].join(" ").toLowerCase();
+    tr.appendChild(el("td", "mono muted", ev.id));
+    tr.appendChild(el("td", "mono", (ev.ts || "").slice(11, 19)));
+    const user = el("td", "user"); user.appendChild(el("b", "", ev.username || "—"));
+    if (ev.role) user.appendChild(el("div", "sub", ev.role));
+    tr.appendChild(user);
+    const tool = el("td", "tool");
+    if (ev.tool) tool.appendChild(el("div", "mono", ev.tool));
+    tool.appendChild(el("div", "sub st-" + (ev.stage || ""), ev.stage || ""));
+    tr.appendChild(tool);
+    const td = el("td"); if (ev.action) td.appendChild(el("span", "badge b-" + ev.action, ev.action)); tr.appendChild(td);
+    const rule = el("td", "rule");
+    rule.appendChild(el("div", "mono", ev.rule || ""));
+    if (ev.severity && ev.severity !== "info") rule.appendChild(el("div", "sub sev-" + ev.severity, ev.severity));
+    tr.appendChild(rule);
+    const reason = chips(el("td", "reason"), ev.reason || "");
+    if (ev.args) reason.appendChild(chips(el("div", "mono"), ev.args.slice(0, 220)));
+    tr.appendChild(reason);
+    tr.hidden = !matches(tr);
+    const tb = $("events"); tb.insertBefore(tr, tb.firstChild);
+    while (tb.children.length > 400) tb.removeChild(tb.lastChild);
+  }
+
+  async function pollEvents(first) {
+    const d = await api("/events?after=" + after);
+    d.events.forEach(ev => { addEvent(ev, !first); after = Math.max(after, ev.id); });
+    applyFilters();
+  }
+
+  function card(title, meta, titleCls) {
+    const c = el("div", "card"); c.appendChild(el("b", titleCls || "", title));
+    if (meta) c.appendChild(el("div", "meta", meta));
+    return c;
+  }
+
+  function renderState(s) {
+    if (!s) return;
+    last = s;
+    renderLedger(s.counters || {});
+    const rt = s.runtime || {}, weak = rt.weakened || [];
+    $("weakbar").hidden = !weak.length;
+    if (weak.length) $("weak-text").textContent = t(rt.weakened.includes("laocoon.enabled") ? "weak.off" : "weak.some", {n: weak.length, keys: weak.join(", ")});
+    $("n-flags").textContent = s.counters.flags || 0;
+    const c = s.classifier || {};
+    $("classifier").textContent = c.enabled ? t("guard.on", {backend: c.backend || "", model: c.model ? " · " + c.model : ""}) : t("guard.off");
+    $("classifier").className = "v " + (c.enabled ? "ok" : "muted");
+
+    const kills = $("kills"); kills.textContent = "";
+    if (!s.kills.length) kills.appendChild(el("div", "empty", t("kill.none")));
+    s.kills.forEach(k => {
+      const cd = card(k.scope === "global" ? t("kill.global") : k.scope + " = " + k.key, k.reason || "");
+      cd.classList.add("kill-active");
+      const b = el("button", "btn btn-sm", t("kill.revive")); b.style.marginTop = "8px";
+      b.onclick = () => api("/kill", {method: "DELETE", body: JSON.stringify({scope: k.scope, key: k.key})}).then(refresh, e => toast(e.message, "bad"));
+      cd.appendChild(b); kills.appendChild(cd);
+    });
+
+    $("c-pending").textContent = s.pending.length; $("c-pending").className = "count" + (s.pending.length ? " on" : "");
+    $("c-flags").textContent = s.flags.length; $("c-flags").className = "count" + (s.flags.length ? " on" : "");
+    const pend = $("pending"); pend.textContent = "";
+    if (!s.pending.length) pend.appendChild(el("div", "empty", t("none")));
+    s.pending.forEach(p => {
+      const cd = card((p.preview && p.preview.title) || p.tool, t("pending.meta", {id: p.id, user: p.user_id}) + (p.reason ? " " + p.reason : ""));
+      (p.preview && p.preview.rows || []).forEach(r => cd.appendChild(el("div", "mono", r[0] + ": " + r[1])));
+      pend.appendChild(cd);
+    });
+
+    const flags = $("flags"); flags.textContent = "";
+    if (!s.flags.length) flags.appendChild(el("div", "empty", t("flags.none")));
+    s.flags.forEach(f => {
+      const cd = card(f.kind + " #" + f.ref + ", " + t("flags.score", {score: f.score}),
+        t("flags.meta", {author: f.author || "—", at: (f.created_at || "").replace("T", " ").slice(0, 16),
+                         types: Array.from(new Set((f.findings || []).map(x => x.type))).join(", ") || "—"}),
+        f.score >= 0.6 ? "bad" : "");
+      cd.appendChild(el("pre", "", f.excerpt || ""));
+      const b = el("button", "btn btn-sm", t("flags.dismiss"));
+      b.onclick = () => api("/flags/" + f.id, {method: "POST", body: JSON.stringify({status: "dismissed"})}).then(refresh, e => toast(e.message, "bad"));
+      cd.appendChild(b); flags.appendChild(cd);
+    });
+  }
+
+  const KINDS = ["allow", "ask", "deny", "kill"];
+  function renderLedger(c) {
+    const total = KINDS.reduce((n, k) => n + (c[k] || 0), 0), bar = $("bar");
+    bar.textContent = "";
+    KINDS.forEach(k => {
+      const n = c[k] || 0;
+      $("n-" + k).textContent = n.toLocaleString(Lcn.lang);
+      $("p-" + k).textContent = total ? pct(n, total) : "";
+      if (!n) return;
+      const seg = el("span", k); seg.style.flexGrow = n;
+      seg.title = t("n." + k) + ": " + n + " (" + pct(n, total) + ")";
+      bar.appendChild(seg);
+    });
+    bar.setAttribute("aria-label", KINDS.map(k => t("n." + k) + " " + (c[k] || 0)).join(", "));
+    $("bar-empty").hidden = total > 0;
+  }
+  function pct(n, total) {
+    const v = 100 * n / total;
+    return (v > 0 && v < 1 ? "<1" : Math.round(v)) + "%";
+  }
+  function syncKeys() {
+    const f = $("f-action").value;
+    document.querySelectorAll(".key").forEach(b => b.setAttribute("aria-pressed", String(b.dataset.k === f)));
+  }
+
+  function renderVerify() {
+    const out = $("verify-out");
+    if (!verified) { out.textContent = t("chain.unchecked"); out.className = "muted"; return; }
+    if (verified.error) { out.textContent = verified.error; out.className = "bad"; return; }
+    out.textContent = verified.ok ? t("verify.ok", {n: verified.count}) : t("verify.bad", {id: verified.broken_at});
+    out.className = verified.ok ? "ok" : "bad";
+  }
+
+  // ⑥ attack memory (opt-in). Attack text is untrusted: text nodes only (chips), never innerHTML.
+  let memSig = null, memLists = null;
+  const MEM_ORIGINS = ["canary", "honey", "rejected", "deny", "manual", "import"];
+  function memOrigin(a) {
+    const o = String(a.origin || ""), key = o.split(":")[0];
+    const how = a.kind === "content" && a.evidence && ["strong", "ambiguous"].includes(a.evidence.how) ? a.evidence.how : "";
+    return t(MEM_ORIGINS.includes(key) ? "mem.origin." + key : "mem.origin.other") +
+      (a.ref ? " " + t("mem.ref", {ref: a.ref}) : "") + (how ? ", " + t("mem.how." + how) : "") + ".";
+  }
+  function memCard(a, candidate) {
+    const hits = a.hits || 0;
+    const cd = card(t(candidate ? "mem.cand.title" : hits === 0 ? "mem.known.new" : hits === 1 ? "mem.known.once" : "mem.known.title",
+                      {id: a.id, hits}),
+                    t(a.kind === "input" ? "mem.kind.input" : "mem.kind.content") + " " + memOrigin(a), candidate ? "" : "bad");
+    cd.appendChild(chips(el("pre", ""), (a.text || "").slice(0, 400)));
+    const row = el("div", "mem-actions");
+    const act = (label, status, cls) => {
+      const b = el("button", "btn btn-sm" + (cls ? " " + cls : ""), t(label));
+      b.onclick = () => api("/memory/" + a.id, {method: "POST", body: JSON.stringify({status})})
+        .then(() => { memSig = null; toast(t(status === "confirmed" ? "mem.done.confirmed" : "mem.done.rejected", {id: a.id})); return refresh(); },
+              e => toast(e.message, "bad"));
+      row.appendChild(b);
+    };
+    if (candidate) act("mem.confirm", "confirmed", "btn-danger");
+    act("mem.reject", "rejected");
+    cd.appendChild(row);
+    return cd;
+  }
+  function renderMemory(m) {
+    const off = !m || m.mode === "off";
+    $("memory-panel").hidden = off;
+    if (off) return;
+    $("c-mem").textContent = m.candidate || 0; $("c-mem").className = "count" + (m.candidate ? " on" : ""); $("c-mem").title = t("mem.count");
+    const facts = $("mem-facts"); facts.textContent = "";
+    [["mem.mode", t("mem.mode." + m.mode)], ["mem.known", String(m.confirmed || 0)], ["mem.hits", String(m.hits || 0)],
+     ["mem.auto", (m.autoconfirm || []).join(", ") || "—"],
+     ["mem.ttl", m.ttl_days ? t("mem.ttl.days", {n: m.ttl_days}) : t("mem.ttl.never")]]
+      .forEach(([k, v]) => { facts.appendChild(el("dt", "", t(k))); facts.appendChild(el("dd", "", v)); });
+    const cands = $("mem-candidates"), known = $("mem-known");
+    cands.textContent = ""; known.textContent = "";
+    if (!memLists) return;
+    cands.appendChild(el("div", "mem-group", t("mem.cands")));
+    if (!memLists.cand.length) cands.appendChild(el("div", "empty", t("mem.cands.none")));
+    memLists.cand.forEach(a => cands.appendChild(memCard(a, true)));
+    if (memLists.known.length) known.appendChild(el("div", "mem-group", t("mem.latest")));
+    memLists.known.forEach(a => known.appendChild(memCard(a, false)));
+  }
+  async function loadMemory(m) {
+    if (!m || m.mode === "off") { memSig = null; memLists = null; return; }
+    const sig = [m.confirmed, m.candidate, m.rejected, m.hits].join("/");
+    if (sig === memSig && memLists) return;
+    const [cand, known] = await Promise.all([api("/memory?status=candidate&limit=20"), api("/memory?status=confirmed&limit=6")]);
+    memLists = {cand: cand.attacks || [], known: known.attacks || []};
+    memSig = sig;
+  }
+
+  async function refresh() {
+    const s = await api("/state");
+    renderState(s);
+    await loadMemory(s && s.memory);
+    renderMemory(s && s.memory);
+  }
+
+  async function tick(first) {
+    try {
+      await Promise.all([pollEvents(first), refresh()]);
+      failures = 0; setLive("live", "live.on");
+    } catch (e) {
+      failures += 1;
+      setLive("down", e.status === 401 ? "live.noaccess" : "live.off");
+      if (e.status === 401 && failures === 1 && !Lcn.NAV.login) toast(e.message + " " + t("token.hint"), "bad");
+    }
+  }
+
+  Lcn.init({page: "console", context: document.querySelector("main").dataset.ctx,
+    onLang: () => { setLive(liveState[0], liveState[1]); applyFilters(); renderState(last); renderMemory(last && last.memory); renderVerify(); },
+    dict: {
+      en: {
+        "title": "Console · {brand}", "h1": "Console",
+        "lede": "Every {brand} decision in real time: what was allowed, what needed approval and what was stopped. The audit log is a hash chain, so any tampering shows up on verification.",
+        "live.connecting": "Connecting…", "live.on": "Live", "live.off": "Offline", "live.noaccess": "No access",
+        "verify": "Verify chain", "verify.running": "Verifying…", "verify.ok": "✓ Intact, {n} events", "verify.bad": "✗ Broken at event #{id}",
+        "export": "Export JSONL", "summary": "Summary", "bar.empty": "No decisions yet.",
+        "n.allow": "Allowed", "n.ask": "Asked for approval", "n.deny": "Denied", "n.kill": "Killed", "n.flags": "Open flags",
+        "chain": "Audit chain", "chain.unchecked": "Not verified yet",
+        "guard.on": "On, {backend}{model}", "guard.off": "Off: deterministic layers only",
+        "events": "Events", "events.sub": "Newest first, refreshed every 2 seconds.",
+        "events.none": "No events yet. Send a message to the application's assistant.", "events.nomatch": "No events match the filters.",
+        "search": "Search by user, tool, rule or reason", "f.all": "All decisions", "f.notallow": "All but allow",
+        "th.time": "Time", "th.user": "User", "th.tool": "Tool and stage", "th.decision": "Decision", "th.rule": "Rule", "th.reason": "Reason",
+        "kill.sub": "Stops agent actions immediately, for everyone or targeted.", "kill.all": "Stop all agent actions",
+        "kill.scope": "Scope", "kill.user": "user id", "kill.tool": "tool", "kill.one": "Stop",
+        "kill.key": "e.g. 9 or send_message", "kill.keylabel": "Key", "kill.none": "Nothing is stopped.", "kill.global": "Every agent action",
+        "kill.revive": "Resume", "kill.confirm": "This stops ALL agent actions for every user. Continue?",
+        "pending": "Pending approvals", "pending.sub": "Actions waiting for the user's approval in the chat.", "none": "None.",
+        "pending.meta": "{id}, user {user}.",
+        "flags": "Flagged content", "flags.sub": "Conversations stopped by a canary or honey-record hit.", "flags.none": "Nothing suspicious.",
+        "flags.score": "score {score}", "flags.meta": "By {author} at {at}: {types}",
+        "flags.dismiss": "Dismiss flag", "token.hint": "Open the page with ?token=…",
+        "weak.some": "{n} defence(s) weaker than the default: {keys}.", "weak.off": "Laocoon is switched off: requests pass through unchecked.",
+        "weak.open": "Open mitigations",
+        "mem": "⑥ Attack memory", "mem.count": "Candidates waiting for review",
+        "mem.sub": "Attacks a tripwire or a person confirmed. Copies and variants are stopped before the model reads them.",
+        "mem.mode": "Mode", "mem.mode.on": "Learning and stopping", "mem.mode.match": "Stopping only (frozen)",
+        "mem.known": "Known attacks", "mem.hits": "Copies stopped", "mem.auto": "Confirmed without review",
+        "mem.ttl": "Kept", "mem.ttl.days": "{n} days after the last match", "mem.ttl.never": "Until deleted",
+        "mem.cands": "Candidates: is this an attack?", "mem.cands.none": "No candidates to review.",
+        "mem.latest": "Latest known attacks",
+        "mem.cand.title": "Candidate #{id}", "mem.known.new": "Attack #{id}", "mem.known.once": "Attack #{id}, stopped once",
+        "mem.known.title": "Attack #{id}, stopped {hits} times",
+        "mem.kind.input": "Typed by a user,", "mem.kind.content": "In content the agent read,",
+        "mem.origin.canary": "caught by the conversation canary", "mem.origin.honey": "caught by a honey record",
+        "mem.origin.rejected": "after the user rejected an approval", "mem.origin.deny": "after a policy denial",
+        "mem.origin.manual": "added by an operator", "mem.origin.import": "imported", "mem.origin.other": "origin unknown",
+        "mem.ref": "in {ref}", "mem.how.strong": "clearly tied to the call", "mem.how.ambiguous": "loosely tied to the call",
+        "mem.confirm": "Confirm attack", "mem.reject": "Not an attack",
+        "mem.done.confirmed": "#{id} confirmed: its copies are now stopped.", "mem.done.rejected": "#{id} marked as not an attack.",
+      },
+      el: {
+        "title": "Κονσόλα · {brand}", "h1": "Κονσόλα",
+        "lede": "Κάθε απόφαση του {brand} σε πραγματικό χρόνο: τι επιτράπηκε, τι χρειάστηκε έγκριση και τι σταμάτησε. Το αρχείο καταγραφής είναι αλυσίδα hash: κάθε αλλοίωση φαίνεται στην επαλήθευση.",
+        "live.connecting": "Σύνδεση…", "live.on": "Ζωντανά", "live.off": "Εκτός σύνδεσης", "live.noaccess": "Χωρίς πρόσβαση",
+        "verify": "Επαλήθευση αλυσίδας", "verify.running": "Επαλήθευση…", "verify.ok": "✓ Ακέραιη, {n} events", "verify.bad": "✗ Σπασμένη στο event #{id}",
+        "export": "Εξαγωγή JSONL", "summary": "Σύνοψη", "bar.empty": "Καμία απόφαση ακόμη.",
+        "n.allow": "Επιτράπηκαν", "n.ask": "Ζήτησαν έγκριση", "n.deny": "Απορρίφθηκαν", "n.kill": "Σταμάτησαν (kill)", "n.flags": "Ανοιχτές σημαίες",
+        "chain": "Αλυσίδα καταγραφής", "chain.unchecked": "Δεν έχει επαληθευτεί",
+        "guard.on": "Ενεργό, {backend}{model}", "guard.off": "Ανενεργό: μόνο τα ντετερμινιστικά επίπεδα",
+        "events": "Events", "events.sub": "Τα πιο πρόσφατα πρώτα, ανανέωση κάθε 2 δευτερόλεπτα.",
+        "events.none": "Δεν υπάρχουν ακόμη events. Στείλτε ένα μήνυμα στον βοηθό της εφαρμογής.", "events.nomatch": "Κανένα event δεν ταιριάζει στα φίλτρα.",
+        "search": "Αναζήτηση με χρήστη, tool, κανόνα ή λόγο", "f.all": "Όλες οι αποφάσεις", "f.notallow": "Εκτός allow",
+        "th.time": "Ώρα", "th.user": "Χρήστης", "th.tool": "Εργαλείο και στάδιο", "th.decision": "Απόφαση", "th.rule": "Κανόνας", "th.reason": "Λόγος",
+        "kill.sub": "Σταματά αμέσως ενέργειες του agent, για όλους ή στοχευμένα.", "kill.all": "Διακοπή όλων των ενεργειών",
+        "kill.scope": "Εύρος", "kill.user": "id χρήστη", "kill.tool": "εργαλείο", "kill.one": "Διακοπή",
+        "kill.key": "π.χ. 9 ή send_message", "kill.keylabel": "Κλειδί", "kill.none": "Τίποτα δεν είναι σταματημένο.", "kill.global": "Όλες οι ενέργειες του agent",
+        "kill.revive": "Επαναφορά", "kill.confirm": "Σταματούν ΟΛΕΣ οι ενέργειες του agent για όλους τους χρήστες. Συνέχεια;",
+        "pending": "Εκκρεμείς εγκρίσεις", "pending.sub": "Ενέργειες που περιμένουν την έγκριση του χρήστη στη συνομιλία.", "none": "Καμία.",
+        "pending.meta": "{id}, χρήστης {user}.",
+        "flags": "Περιεχόμενο με σημαία", "flags.sub": "Συνομιλίες που σταμάτησαν από canary ή εγγραφή-δόλωμα.", "flags.none": "Τίποτα ύποπτο.",
+        "flags.score": "βαθμός {score}", "flags.meta": "Από {author} στις {at}: {types}",
+        "flags.dismiss": "Απόρριψη σημαίας", "token.hint": "Ανοίξτε τη σελίδα με ?token=…",
+        "weak.some": "{n} άμυνα(-ες) ασθενέστερη(-ες) από την προεπιλογή: {keys}.", "weak.off": "Το Laocoon είναι ανενεργό: τα αιτήματα περνούν χωρίς έλεγχο.",
+        "weak.open": "Μέτρα προστασίας",
+        "mem": "⑥ Μνήμη επιθέσεων", "mem.count": "Υποψήφιες που περιμένουν έλεγχο",
+        "mem.sub": "Επιθέσεις που επιβεβαίωσε μια παγίδα ή ένας άνθρωπος. Αντίγραφα και παραλλαγές σταματούν πριν τα διαβάσει το μοντέλο.",
+        "mem.mode": "Λειτουργία", "mem.mode.on": "Μαθαίνει και σταματά", "mem.mode.match": "Μόνο σταματά (παγωμένη)",
+        "mem.known": "Γνωστές επιθέσεις", "mem.hits": "Αντίγραφα που σταμάτησαν", "mem.auto": "Επιβεβαίωση χωρίς έλεγχο",
+        "mem.ttl": "Διατήρηση", "mem.ttl.days": "{n} ημέρες μετά τον τελευταίο εντοπισμό", "mem.ttl.never": "Μέχρι να διαγραφεί",
+        "mem.cands": "Υποψήφιες: είναι επίθεση;", "mem.cands.none": "Καμία υποψήφια για έλεγχο.",
+        "mem.latest": "Πρόσφατες γνωστές επιθέσεις",
+        "mem.cand.title": "Υποψήφια #{id}", "mem.known.new": "Επίθεση #{id}", "mem.known.once": "Επίθεση #{id}, σταμάτησε μία φορά",
+        "mem.known.title": "Επίθεση #{id}, σταμάτησε {hits} φορές",
+        "mem.kind.input": "Γράφτηκε από χρήστη,", "mem.kind.content": "Σε περιεχόμενο που διάβασε ο agent,",
+        "mem.origin.canary": "την εντόπισε το canary της συνομιλίας", "mem.origin.honey": "την εντόπισε εγγραφή-δόλωμα",
+        "mem.origin.rejected": "αφού ο χρήστης απέρριψε μια έγκριση", "mem.origin.deny": "μετά από άρνηση της πολιτικής",
+        "mem.origin.manual": "την πρόσθεσε διαχειριστής", "mem.origin.import": "εισαγωγή", "mem.origin.other": "άγνωστη προέλευση",
+        "mem.ref": "στο {ref}", "mem.how.strong": "σαφώς δεμένο με την κλήση", "mem.how.ambiguous": "χαλαρά δεμένο με την κλήση",
+        "mem.confirm": "Είναι επίθεση", "mem.reject": "Δεν είναι επίθεση",
+        "mem.done.confirmed": "Η #{id} επιβεβαιώθηκε: τα αντίγραφά της σταματούν.", "mem.done.rejected": "Η #{id} σημειώθηκε ότι δεν είναι επίθεση.",
+      },
+    }});
+  setLive("", "live.connecting");
+  $("export").href = Lcn.withToken(API + "/export.jsonl");
+  if (Lcn.NAV.settings) $("weak-link").href = Lcn.withToken(Lcn.NAV.settings); else $("weak-link").hidden = true;
+  applyFilters();
+
+  $("kill-global").onclick = () => {
+    if (confirm(t("kill.confirm")))
+      api("/kill", {method: "POST", body: JSON.stringify({scope: "global", key: "*", reason: "global stop from console"})})
+        .then(refresh, e => toast(e.message, "bad"));
+  };
+  $("kill-one").onclick = () => {
+    const key = $("kill-key").value.trim(); if (!key) return;
+    api("/kill", {method: "POST", body: JSON.stringify({scope: $("kill-scope").value, key, reason: "manual stop from console"})})
+      .then(() => { $("kill-key").value = ""; return refresh(); }, e => toast(e.message, "bad"));
+  };
+  $("verify").onclick = async () => {
+    const out = $("verify-out"); out.textContent = t("verify.running"); out.className = "muted";
+    try { verified = await api("/verify"); } catch (e) { verified = {error: e.message}; }
+    renderVerify();
+  };
+  $("q").oninput = applyFilters;
+  $("f-action").onchange = () => { applyFilters(); syncKeys(); };
+  document.querySelectorAll(".key").forEach(b => {
+    b.onclick = () => { $("f-action").value = $("f-action").value === b.dataset.k ? "" : b.dataset.k; applyFilters(); syncKeys(); };
+  });
+
+  tick(true);
+  setInterval(() => tick(false), 2000);
+})();
+</script>
+</body>
+</html>

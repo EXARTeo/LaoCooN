@@ -1,0 +1,5 @@
+# The AgentDojo harness (eval/agentdojo). A separate venv is fine, plus requirements.txt.
+#   python -m venv ../.venv-agentdojo && ../.venv-agentdojo/bin/pip install -r requirements.txt -r requirements-agentdojo.txt
+agentdojo==0.1.35
+transformers>=4.41     # --guard hf / hf-whole and --defense pi_detector
+torch>=2.2

@@ -1,0 +1,372 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="icon" type="image/svg+xml" href="__BRAND_ICON__">
+<title data-i18n="title">Mitigations · __BRAND__</title>
+<style>
+<!--#include _base.css-->
+.layout{display:grid;grid-template-columns:minmax(0,1fr) 300px;gap:20px;align-items:start}
+@media (max-width:1040px){.layout{grid-template-columns:1fr}.aside{position:static!important}}
+.layout>*{min-width:0}
+.master{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:16px;align-items:center;background:var(--panel);border:1px solid var(--line);
+  border-left:4px solid var(--allow-fill);border-radius:var(--radius);padding:18px 20px;margin-bottom:16px}
+.master.off{border-left-color:var(--deny-fill);background:var(--deny-soft)}
+.master h2{font:600 19px/1.2 var(--display)}.master p{margin:4px 0 0;color:var(--muted);font-size:13px;max-width:66ch}
+.group{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);margin-bottom:14px}
+.ghead{display:flex;align-items:baseline;gap:10px;padding:14px 18px 4px}
+.ghead h3{font-size:15px;margin:0}.ghead .num{font:600 18px/1 var(--display);color:var(--accent)}
+.gsub{color:var(--muted);font-size:12.5px;padding:0 18px 6px;margin:0}
+.srow{display:grid;grid-template-columns:minmax(0,1fr) minmax(220px,auto);gap:8px 20px;align-items:center;padding:12px 18px;border-top:1px solid var(--line)}
+.srow.weak{background:var(--deny-soft)}
+.srow.na{opacity:.6}
+.slabel b{font-weight:500}.slabel .help{display:block;color:var(--muted);font-size:12.5px;margin-top:2px;max-width:64ch}
+.smeta{display:flex;gap:6px;flex-wrap:wrap;margin-top:6px;align-items:center}
+.smeta .env{font:11.5px var(--mono);color:var(--faint)}
+.sctl{display:flex;gap:10px;align-items:center;justify-content:flex-end;flex-wrap:wrap}
+.reset{background:none;border:none;color:var(--accent);cursor:pointer;font-size:12.5px;padding:2px 4px}
+.reset:hover{text-decoration:underline}
+@media (max-width:640px){.srow{grid-template-columns:1fr}.sctl{justify-content:flex-start}}
+.switch{display:inline-flex;align-items:center;gap:9px;background:none;border:none;padding:2px 0;cursor:pointer;color:var(--ink)}
+.switch:disabled{cursor:not-allowed}
+.switch .track{width:40px;height:22px;border-radius:99px;background:var(--line-strong);position:relative;flex:none;transition:background .15s}
+.switch .track::after{content:"";position:absolute;top:2px;left:2px;width:18px;height:18px;border-radius:50%;background:#fff;
+  box-shadow:0 1px 2px rgba(0,0,0,.25);transition:transform .15s}
+.switch[aria-checked=true] .track{background:var(--allow-fill)}.switch[aria-checked=true] .track::after{transform:translateX(18px)}
+.switch .lbl{font-size:13px;min-width:28px;text-align:left}
+.range{display:flex;align-items:center;gap:10px}
+.range input[type=range]{width:180px;accent-color:var(--accent-fill)}
+.range input[type=number]{width:86px;padding:4px 8px;font-variant-numeric:tabular-nums}
+.range output{font-size:12.5px;color:var(--muted);min-width:52px;font-variant-numeric:tabular-nums}
+.seg{display:inline-flex;border:1px solid var(--line-strong);border-radius:var(--radius-sm);overflow:hidden}
+.seg button{background:none;border:none;padding:5px 11px;font-size:13px;cursor:pointer;color:var(--ink-2)}
+.seg button+button{border-left:1px solid var(--line-strong)}
+.seg button[aria-checked=true]{background:var(--accent-soft);color:var(--accent);font-weight:600}
+.aside{position:sticky;top:76px}
+.aside .panel+.panel{margin-top:14px}
+.weaklist{margin:8px 0 0;padding:0;list-style:none;font-size:13px}
+.weaklist li{padding:5px 0;border-top:1px solid var(--line);display:flex;justify-content:space-between;gap:8px}
+.weaklist li:first-child{border-top:none}
+.allgood{color:var(--allow);font-size:13px;margin:6px 0 0}
+</style>
+</head>
+<body>
+<!--#include _header.html-->
+<main class="page" data-ctx="__TITLE__">
+  <div class="page-head">
+    <div>
+      <h1 data-i18n="h1">Mitigations</h1>
+      <p class="lede" data-i18n="lede">Switch each defence on or off while the system runs. A change reaches every worker within a
+        second and is written to the audit chain with your name.</p>
+    </div>
+    <div class="actions">
+      <span class="status" id="live"><span class="dot"></span><span></span></span>
+      <button class="btn" id="reset-all" data-i18n="resetall">Reset all to defaults</button>
+    </div>
+  </div>
+  <p class="note warn" id="locked" hidden data-i18n="locked">This server runs with LAOCOON_RUNTIME_SETTINGS=off: the switches are shown read-only and
+    only the environment decides.</p>
+  <div class="layout" style="margin-top:16px">
+    <div id="groups"><p class="empty" data-i18n="loading">Loading…</p></div>
+    <aside class="aside">
+      <section class="panel">
+        <h2 class="section-title" data-i18n="weak.title">Weaker than the defaults</h2>
+        <div id="weak"></div>
+      </section>
+      <section class="panel">
+        <h2 class="section-title" data-i18n="how.title">How this works</h2>
+        <p class="section-sub" style="margin-top:6px" data-i18n="how.text">The defaults come from the environment variables shown under
+          each switch. A value set here overrides them until you reset it, also after a restart. The policy file is not
+          changed: roles, tools and approvals per tool live in the policy studio.</p>
+      </section>
+    </aside>
+  </div>
+</main>
+<script>
+<!--#include _common.js-->
+(function () {
+  const API = "__API_BASE__";
+  const {el, toast, t} = Lcn;
+  const $ = id => document.getElementById(id);
+  const api = (path, opts) => Lcn.api(API, path, opts);
+  let S = null, pending = {}, timer = null, busy = false;
+
+  const GROUPS = {laocoon: "", firewall: "①", guard: "②", canary: "③", approvals: "④", persist: "⑤", private_data: ""};
+  const label = (key, suffix) => { const k = "s." + key + (suffix || ""); const v = t(k); return v === k ? null : v; };
+
+  function fmt(s, v) {
+    if (s.unit === "s") {
+      v = Number(v);
+      if (v >= 3600 && v % 3600 === 0) return t("u.h", {n: v / 3600});
+      if (v >= 60) return t("u.min", {n: Math.round(v / 6) / 10});
+      return t("u.s", {n: v});
+    }
+    return String(v);
+  }
+
+  function render() {
+    const box = $("groups"); box.textContent = "";
+    $("locked").hidden = !S.locked;
+    $("reset-all").disabled = S.locked || !S.settings.some(s => s.source === "runtime");
+    const weak = new Set(S.weakened || []);
+    const byGroup = {};
+    S.settings.forEach(s => { (byGroup[s.group] = byGroup[s.group] || []).push(s); });
+    Object.keys(byGroup).forEach(g => {
+      const items = byGroup[g];
+      if (g === "laocoon") { items.forEach(s => box.appendChild(master(s, weak.has(s.key)))); return; }
+      const sec = el("section", "group");
+      const head = sec.appendChild(el("div", "ghead"));
+      if (GROUPS[g]) head.appendChild(el("span", "num", GROUPS[g]));
+      head.appendChild(el("h3", "", label(g, ".group") || g));
+      const sub = label(g, ".groupsub"); if (sub) sec.appendChild(el("p", "gsub", sub));
+      items.forEach(s => sec.appendChild(row(s, weak.has(s.key))));
+      box.appendChild(sec);
+    });
+    renderWeak();
+  }
+
+  function master(s, isWeak) {
+    const m = el("section", "master" + (s.value ? "" : " off"));
+    const txt = m.appendChild(el("div"));
+    txt.appendChild(el("h2", "", t(s.value ? "master.on" : "master.off")));
+    txt.appendChild(el("p", "", label(s.key, ".help") || s.note || ""));
+    const meta = txt.appendChild(el("div", "smeta")); addMeta(meta, s, isWeak);
+    m.appendChild(control(s));
+    return m;
+  }
+
+  function row(s, isWeak) {
+    const guardOff = s.key.startsWith("guard.points.") && !(S.settings.find(x => x.key === "guard.enabled") || {}).value;
+    const r = el("div", "srow" + (isWeak ? " weak" : "") + (s.available && !guardOff ? "" : " na"));
+    const l = r.appendChild(el("div", "slabel"));
+    l.appendChild(el("b", "", label(s.key) || s.key));
+    const help = label(s.key, ".help");
+    if (help) l.appendChild(el("span", "help", help));
+    if (!s.available) {                              // the server's note is Greek; English has its own line
+      const why = Lcn.lang === "el" && s.note ? s.note : t(s.group === "private_data" ? "na.private" : s.group === "guard" ? "na.guard" : "na.other");
+      l.appendChild(el("span", "help", why));
+    }
+    else if (guardOff) l.appendChild(el("span", "help", t("guard.pointsoff")));
+    const meta = l.appendChild(el("div", "smeta")); addMeta(meta, s, isWeak);
+    r.appendChild(control(s));
+    return r;
+  }
+
+  function addMeta(meta, s, isWeak) {
+    if (isWeak) meta.appendChild(el("span", "badge b-deny", t("weak.badge")));
+    meta.appendChild(el("span", "badge " + (s.source === "runtime" ? "b-login" : ""), t("src." + s.source)));
+    if (s.env) meta.appendChild(el("span", "env", s.env));
+    if (s.source === "runtime" && !S.locked) {
+      const b = el("button", "reset", t("reset", {v: fmtDefault(s)})); b.type = "button";
+      b.onclick = () => send(() => api("/settings/" + encodeURIComponent(s.key), {method: "DELETE", body: "{}"}));
+      meta.appendChild(b);
+    }
+  }
+  const fmtDefault = s => s.type === "bool" ? t(s.default ? "on" : "off") : fmt(s, s.default);
+
+  function control(s) {
+    const box = el("div", "sctl");
+    const dis = S.locked || !s.available;
+    if (s.type === "bool") {
+      const b = el("button", "switch"); b.type = "button"; b.setAttribute("role", "switch");
+      b.setAttribute("aria-checked", String(!!s.value)); b.setAttribute("aria-label", label(s.key) || s.key);
+      b.disabled = dis;
+      b.appendChild(el("span", "track"));
+      b.appendChild(el("span", "lbl", t(s.value ? "on" : "off")));
+      b.onclick = () => {
+        const v = !s.value;
+        if (!v && s.key === "laocoon.enabled" && !confirm(t("master.confirm"))) return;
+        set(s.key, v, true);
+      };
+      box.appendChild(b);
+    } else if (s.type === "choice") {
+      const g = el("div", "seg"); g.setAttribute("role", "radiogroup");
+      (s.choices || []).forEach(c => {
+        const b = el("button", "", label(s.key, "." + c) || String(c)); b.type = "button"; b.setAttribute("role", "radio");
+        b.setAttribute("aria-checked", String(c === s.value)); b.disabled = dis;
+        b.onclick = () => set(s.key, c, true);
+        g.appendChild(b);
+      });
+      box.appendChild(g);
+    } else {
+      const w = el("div", "range");
+      const r = el("input"); r.type = "range"; r.min = s.min ?? 0; r.max = s.max ?? 100; r.step = s.step ?? (s.type === "int" ? 1 : 0.01);
+      r.value = s.value; r.disabled = dis; r.setAttribute("aria-label", label(s.key) || s.key);
+      const n = el("input"); n.type = "number"; n.min = r.min; n.max = r.max; n.step = r.step; n.value = s.value; n.disabled = dis;
+      n.setAttribute("aria-label", label(s.key) || s.key);
+      const out = el("output", "", s.unit ? fmt(s, s.value) : "");
+      const upd = (v, from) => {
+        v = s.type === "int" ? Math.round(Number(v)) : Number(v);
+        if (Number.isNaN(v)) return;
+        if (from !== r) r.value = v; if (from !== n) n.value = v;
+        out.textContent = s.unit ? fmt(s, v) : "";
+        set(s.key, v, false);
+      };
+      r.oninput = () => upd(r.value, r);
+      n.onchange = () => upd(Math.min(Number(n.max), Math.max(Number(n.min), Number(n.value))), n);
+      w.append(r, n, out);
+      box.appendChild(w);
+    }
+    return box;
+  }
+
+  // Switches send at once; sliders wait for the hand to stop.
+  function set(key, value, now) {
+    pending[key] = value;
+    clearTimeout(timer);
+    timer = setTimeout(flush, now ? 0 : 450);
+  }
+  function flush() {
+    const values = pending; pending = {};
+    if (!Object.keys(values).length) return;
+    send(() => api("/settings", {method: "PUT", body: JSON.stringify({values})}), values);
+  }
+  async function send(call, values) {
+    busy = true;
+    try {
+      S = await call();
+      render();
+      if (values) {
+        const weak = Object.keys(values).filter(k => (S.weakened || []).includes(k));
+        toast(weak.length ? t("toast.weak", {keys: weak.map(k => label(k) || k).join(", ")}) : t("toast.saved"), weak.length ? "bad" : "");
+      } else toast(t("toast.reset"));
+    } catch (e) {
+      toast((e.data && e.data.error) || e.message, "bad");
+      await load();
+    } finally { busy = false; }
+  }
+
+  function renderWeak() {
+    const box = $("weak"); box.textContent = "";
+    const w = S.weakened || [];
+    if (!w.length) { box.appendChild(el("p", "allgood", t("weak.none"))); return; }
+    const ul = box.appendChild(el("ul", "weaklist"));
+    w.forEach(k => {
+      const s = S.settings.find(x => x.key === k) || {key: k};
+      const li = ul.appendChild(el("li"));
+      li.appendChild(el("span", "", label(k) || k));
+      li.appendChild(el("span", "muted", s.type === "bool" ? t(s.value ? "on" : "off") : fmt(s, s.value)));
+    });
+  }
+
+  function setLive(ok) {
+    $("live").firstChild.className = "dot " + (ok ? "live" : "down");
+    $("live").lastChild.textContent = t(ok ? "live.on" : "live.off");
+  }
+  async function load() {
+    try { S = await api("/settings"); setLive(true); render(); }
+    catch (e) { setLive(false); if (e.status !== 401) { $("groups").textContent = ""; $("groups").appendChild(el("p", "empty", t("err.load", {msg: e.message}))); } }
+  }
+
+  $("reset-all").onclick = () => {
+    if (!S || !confirm(t("resetall.confirm"))) return;
+    const keys = S.settings.filter(s => s.source === "runtime").map(s => s.key);
+    send(async () => { let r = S; for (const k of keys) r = await api("/settings/" + encodeURIComponent(k), {method: "DELETE", body: "{}"}); return r; });
+  };
+
+  Lcn.init({page: "settings", context: document.querySelector("main").dataset.ctx, onLang: () => { if (S) render(); }, dict: {
+    en: {
+      "title": "Mitigations · {brand}", "h1": "Mitigations",
+      "lede": "Switch each defence on or off while the system runs. A change reaches every worker within a second and is written to the audit chain with your name.",
+      "loading": "Loading…", "resetall": "Reset all to defaults", "resetall.confirm": "Put every switch back to its default?",
+      "locked": "This server runs with LAOCOON_RUNTIME_SETTINGS=off: the switches are shown read-only and only the environment decides.",
+      "weak.title": "Weaker than the defaults", "weak.none": "✓ Every defence is at its default or stricter.", "weak.badge": "weakened",
+      "how.title": "How this works",
+      "how.text": "The defaults come from the environment variables shown under each switch. A value set here overrides them until you reset it, also after a restart. The policy file is not changed: roles, tools and approvals per tool live in the policy studio.",
+      "on": "On", "off": "Off", "reset": "Reset to {v}",
+      "src.runtime": "changed here", "src.env": "from the environment", "src.default": "default",
+      "live.on": "Live", "live.off": "Offline",
+      "toast.saved": "Saved. Every worker uses it within a second.", "toast.reset": "Back to the default.",
+      "toast.weak": "Saved, and weaker than the default: {keys}. It is in the audit chain.",
+      "err.load": "Could not load the settings: {msg}",
+      "u.s": "{n} s", "u.min": "{n} min", "u.h": "{n} h",
+      "master.on": "Laocoon is protecting the agent", "master.off": "Laocoon is off: requests pass through unchecked",
+      "master.confirm": "Turn Laocoon off? Every request then reaches the model and the tools unchecked, for every user.",
+      "s.laocoon.enabled.help": "The whole layer. Off is the “without Laocoon” baseline of the evaluation: use it to show what an attack does unprotected.",
+      "s.firewall.group": "Deputy Firewall", "s.firewall.groupsub": "Which tools exist in a run, for whom, and on which objects.",
+      "s.firewall.rbac": "Tools by role", "s.firewall.rbac.help": "The model only sees the tools the user's role has.",
+      "s.firewall.abac": "Resource constraints", "s.firewall.abac.help": "Arguments must point to objects in the user's scope (their courses, their submissions).",
+      "s.firewall.identity": "Identity from code", "s.firewall.identity.help": "Identity arguments are the signed-in user, filled by code; another user's id is denied.",
+      "s.firewall.filters": "Result filters", "s.firewall.filters.help": "Results are trimmed (GDPR minimisation) before the model sees them.",
+      "s.guard.group": "Siren Guard", "s.guard.groupsub": "The classifier. It can only make a decision stricter; the deterministic layers decide either way.",
+      "s.guard.enabled": "Classifier", "s.guard.enabled.help": "Consult the classifier at the checkpoints below. Needs a backend (TYPESAFE_API_KEY or LAOCOON_GUARD_BACKEND).",
+      "guard.pointsoff": "Has an effect only while the classifier is on.",
+      "na.guard": "Not available: this server has no classifier backend (TYPESAFE_API_KEY or LAOCOON_GUARD_BACKEND).",
+      "na.private": "Not available: the policy needs a private_data section and LAOCOON_SECRET of at least 32 characters.",
+      "na.other": "Not available on this server.",
+      "s.guard.points.G1": "G1 user input", "s.guard.points.G1.help": "Classify the user's message before the model sees it.",
+      "s.guard.points.G2": "G2 tool results", "s.guard.points.G2.help": "Classify third-party content in tool results.",
+      "s.guard.points.G2b": "G2b before a sensitive action", "s.guard.points.G2b.help": "Classify a side effect proposed after an untrusted read.",
+      "s.guard.points.G3": "G3 final answer", "s.guard.points.G3.help": "Classify the model's answer before the user sees it.",
+      "s.canary.group": "Canary", "s.canary.groupsub": "Tripwires that show a leak and cut it off.",
+      "s.canary.system_prompt": "System-prompt canary", "s.canary.system_prompt.help": "A per-conversation secret in the system prompt; seen in an answer or argument, it stops the agent.",
+      "s.canary.honey": "Honey records", "s.canary.honey.help": "Decoy AMKA/IBAN values: withdrawn from answers, they stop the agent in tool arguments.",
+      "s.canary.dlp": "Secret patterns (DLP)", "s.canary.dlp.help": "Answers are searched for the policy's secret patterns.",
+      "s.approvals.group": "Bound approvals", "s.approvals.groupsub": "Human approval bound to the exact arguments.",
+      "s.approvals.enabled": "Ask before side effects", "s.approvals.enabled.help": "Writes, messages and external calls wait for the user's approval as the policy says. Off: they run at once.",
+      "s.approvals.ttl": "Approval lifetime", "s.approvals.ttl.help": "How long an approval card stays valid.",
+      "s.persist.group": "Repeat offenders", "s.persist.groupsub": "A user who keeps hitting high-severity denials is frozen for a while.",
+      "s.persist.enabled": "Freeze repeat offenders", "s.persist.enabled.help": "Stop a user's agent after repeated high-severity denials.",
+      "s.persist.threshold": "Denials before freezing", "s.persist.threshold.help": "High-severity denials within the window.",
+      "s.persist.window": "Window", "s.persist.window.help": "The period in which the denials are counted.",
+      "s.persist.ttl": "Freeze length", "s.persist.ttl.help": "How long the user stays frozen.",
+      "s.private_data.group": "Private data", "s.private_data.groupsub": "Declared personal data becomes a placeholder before the model sees it.",
+      "s.private_data.enabled": "Placeholders", "s.private_data.enabled.help": "Replace AMKA, IBAN, phone and the other declared values with ⟦TYPE:id⟧. Needs LAOCOON_SECRET.",
+    },
+    el: {
+      "title": "Μέτρα προστασίας · {brand}", "h1": "Μέτρα προστασίας",
+      "lede": "Ενεργοποιήστε ή απενεργοποιήστε κάθε άμυνα ενώ το σύστημα τρέχει. Η αλλαγή φτάνει σε κάθε worker μέσα σε ένα δευτερόλεπτο και καταγράφεται στην αλυσίδα με το όνομά σας.",
+      "loading": "Φόρτωση…", "resetall": "Επαναφορά όλων", "resetall.confirm": "Επαναφορά κάθε διακόπτη στην προεπιλογή του;",
+      "locked": "Ο διακομιστής τρέχει με LAOCOON_RUNTIME_SETTINGS=off: οι διακόπτες φαίνονται μόνο για ανάγνωση και αποφασίζει το περιβάλλον.",
+      "weak.title": "Ασθενέστερα από τις προεπιλογές", "weak.none": "✓ Κάθε άμυνα είναι στην προεπιλογή της ή αυστηρότερη.", "weak.badge": "αποδυναμωμένο",
+      "how.title": "Πώς λειτουργεί",
+      "how.text": "Οι προεπιλογές έρχονται από τις μεταβλητές περιβάλλοντος κάτω από κάθε διακόπτη. Μια τιμή που ορίζεται εδώ τις αντικαθιστά μέχρι να γίνει επαναφορά, και μετά από επανεκκίνηση. Το αρχείο πολιτικής δεν αλλάζει: ρόλοι, εργαλεία και εγκρίσεις ανά εργαλείο ρυθμίζονται στις πολιτικές.",
+      "on": "Ναι", "off": "Όχι", "reset": "Επαναφορά σε {v}",
+      "src.runtime": "αλλαγμένο εδώ", "src.env": "από το περιβάλλον", "src.default": "προεπιλογή",
+      "live.on": "Ζωντανά", "live.off": "Εκτός σύνδεσης",
+      "toast.saved": "Αποθηκεύτηκε. Ισχύει σε κάθε worker μέσα σε ένα δευτερόλεπτο.", "toast.reset": "Επαναφέρθηκε η προεπιλογή.",
+      "toast.weak": "Αποθηκεύτηκε, και είναι ασθενέστερο από την προεπιλογή: {keys}. Καταγράφηκε στην αλυσίδα.",
+      "err.load": "Οι ρυθμίσεις δεν φορτώθηκαν: {msg}",
+      "u.s": "{n} δευτ.", "u.min": "{n} λεπτά", "u.h": "{n} ώρες",
+      "master.on": "Το Laocoon προστατεύει τον agent", "master.off": "Το Laocoon είναι ανενεργό: τα αιτήματα περνούν χωρίς έλεγχο",
+      "master.confirm": "Απενεργοποίηση του Laocoon; Κάθε αίτημα θα φτάνει στο μοντέλο και στα εργαλεία χωρίς έλεγχο, για όλους τους χρήστες.",
+      "s.laocoon.enabled.help": "Όλο το επίπεδο. Ανενεργό είναι η βάση «χωρίς Laocoon» της αξιολόγησης: δείχνει τι κάνει μια επίθεση χωρίς προστασία.",
+      "s.firewall.group": "Deputy Firewall", "s.firewall.groupsub": "Ποια εργαλεία υπάρχουν σε ένα run, για ποιον και σε ποια αντικείμενα.",
+      "s.firewall.rbac": "Εργαλεία ανά ρόλο", "s.firewall.rbac.help": "Το μοντέλο βλέπει μόνο τα εργαλεία του ρόλου του χρήστη.",
+      "s.firewall.abac": "Περιορισμοί πόρων", "s.firewall.abac.help": "Τα ορίσματα πρέπει να δείχνουν σε αντικείμενα του χρήστη (τα μαθήματά του, τις υποβολές του).",
+      "s.firewall.identity": "Ταυτότητα από τον κώδικα", "s.firewall.identity.help": "Τα ορίσματα ταυτότητας είναι ο συνδεδεμένος χρήστης, από τον κώδικα· id άλλου χρήστη απορρίπτεται.",
+      "s.firewall.filters": "Φίλτρα αποτελεσμάτων", "s.firewall.filters.help": "Τα αποτελέσματα περιορίζονται (ελαχιστοποίηση GDPR) πριν τα δει το μοντέλο.",
+      "s.guard.group": "Siren Guard", "s.guard.groupsub": "Ο ταξινομητής. Μπορεί μόνο να κάνει μια απόφαση αυστηρότερη· αποφασίζουν πάντα τα ντετερμινιστικά επίπεδα.",
+      "s.guard.enabled": "Ταξινομητής", "s.guard.enabled.help": "Ερωτάται στα σημεία ελέγχου παρακάτω. Χρειάζεται backend (TYPESAFE_API_KEY ή LAOCOON_GUARD_BACKEND).",
+      "guard.pointsoff": "Ισχύει μόνο όταν ο ταξινομητής είναι ενεργός.",
+      "na.guard": "Μη διαθέσιμο: ο διακομιστής δεν έχει backend ταξινομητή (TYPESAFE_API_KEY ή LAOCOON_GUARD_BACKEND).",
+      "na.private": "Μη διαθέσιμο: η πολιτική χρειάζεται ενότητα private_data και LAOCOON_SECRET τουλάχιστον 32 χαρακτήρων.",
+      "na.other": "Μη διαθέσιμο σε αυτόν τον διακομιστή.",
+      "s.guard.points.G1": "G1 είσοδος χρήστη", "s.guard.points.G1.help": "Ταξινόμηση του μηνύματος του χρήστη πριν το δει το μοντέλο.",
+      "s.guard.points.G2": "G2 αποτελέσματα εργαλείων", "s.guard.points.G2.help": "Ταξινόμηση περιεχομένου τρίτων στα αποτελέσματα.",
+      "s.guard.points.G2b": "G2b πριν από ευαίσθητη ενέργεια", "s.guard.points.G2b.help": "Ταξινόμηση ενέργειας που προτείνεται μετά από μη αξιόπιστη ανάγνωση.",
+      "s.guard.points.G3": "G3 τελική απάντηση", "s.guard.points.G3.help": "Ταξινόμηση της απάντησης πριν τη δει ο χρήστης.",
+      "s.canary.group": "Canary", "s.canary.groupsub": "Παγίδες που φανερώνουν μια διαρροή και την κόβουν.",
+      "s.canary.system_prompt": "Canary στο system prompt", "s.canary.system_prompt.help": "Μυστικό ανά συνομιλία στο system prompt· αν εμφανιστεί σε απάντηση ή όρισμα, ο agent σταματά.",
+      "s.canary.honey": "Εγγραφές-δολώματα", "s.canary.honey.help": "Ψεύτικα ΑΜΚΑ/IBAN: αποσύρονται από απαντήσεις, σταματούν τον agent σε ορίσματα.",
+      "s.canary.dlp": "Μοτίβα μυστικών (DLP)", "s.canary.dlp.help": "Οι απαντήσεις ελέγχονται για τα μοτίβα μυστικών της πολιτικής.",
+      "s.approvals.group": "Δεσμευμένες εγκρίσεις", "s.approvals.groupsub": "Έγκριση από άνθρωπο, δεμένη στα ακριβή ορίσματα.",
+      "s.approvals.enabled": "Έγκριση πριν από ενέργειες", "s.approvals.enabled.help": "Εγγραφές, μηνύματα και εξωτερικές κλήσεις περιμένουν την έγκριση του χρήστη όπως ορίζει η πολιτική. Ανενεργό: εκτελούνται αμέσως.",
+      "s.approvals.ttl": "Διάρκεια έγκρισης", "s.approvals.ttl.help": "Πόσο ισχύει μια κάρτα έγκρισης.",
+      "s.persist.group": "Επαναλαμβανόμενες παραβάσεις", "s.persist.groupsub": "Χρήστης που επανειλημμένα χτυπά σοβαρές απορρίψεις παγώνει για λίγο.",
+      "s.persist.enabled": "Πάγωμα παραβατών", "s.persist.enabled.help": "Σταματά τον agent ενός χρήστη μετά από επανειλημμένες σοβαρές απορρίψεις.",
+      "s.persist.threshold": "Απορρίψεις πριν το πάγωμα", "s.persist.threshold.help": "Σοβαρές απορρίψεις μέσα στο παράθυρο.",
+      "s.persist.window": "Παράθυρο", "s.persist.window.help": "Το διάστημα στο οποίο μετρώνται οι απορρίψεις.",
+      "s.persist.ttl": "Διάρκεια παγώματος", "s.persist.ttl.help": "Πόσο μένει παγωμένος ο χρήστης.",
+      "s.private_data.group": "Προσωπικά δεδομένα", "s.private_data.groupsub": "Τα δηλωμένα προσωπικά δεδομένα γίνονται placeholder πριν τα δει το μοντέλο.",
+      "s.private_data.enabled": "Placeholders", "s.private_data.enabled.help": "Αντικαθιστά ΑΜΚΑ, IBAN, τηλέφωνο και τις άλλες δηλωμένες τιμές με ⟦ΤΥΠΟΣ:id⟧. Χρειάζεται LAOCOON_SECRET.",
+    },
+  }});
+  setLive(true); $("live").lastChild.textContent = "";
+  load();
+  setInterval(() => { if (!busy && !Object.keys(pending).length && !document.querySelector(".range input:focus")) load(); }, 5000);
+})();
+</script>
+</body>
+</html>

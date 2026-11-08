@@ -1,0 +1,13 @@
+.env
+deploy/.env
+*.db
+*.db-wal
+*.db-shm
+__pycache__/
+.pytest_cache/
+.eval-data/
+.local-secret
+eval/results/
+.venv/
+venv/
+.venv-*/

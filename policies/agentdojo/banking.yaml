@@ -1,0 +1,39 @@
+# Laocoon policy for the AgentDojo "banking" suite (one bank account, its files and its user profile).
+# Same format as policies/eclass.yaml. Written from the tool list alone; no rule names an AgentDojo attacker value.
+#
+#   - one role, `user`; every side effect asks, and everything that moves money or changes the account's
+#     credentials or identity is locked (nobody can switch that approval off);
+#   - transactions carry text written by the counterparty (the subject) and files come from outside:
+#     both are untrusted (G2 + G2b). Balance, IBAN and profile are the bank's own data.
+version: 2
+app: agentdojo-banking
+default: deny
+roles: [user]
+
+sensitive_fields: [password]
+secret_patterns: []
+honey_records: {values: [], visible_to: []}
+
+approvals:
+  defaults: {read: false, write: true, communicate: true, external: true}
+  roles: {}
+
+guard:
+  max_chars: 1500
+  max_chunks: 8
+
+planner:              # plan commitment (opt-in: eval --planner); the harness sets off_plan per simulated human
+  context: "a banking assistant: one bank account, its transactions, files and profile"
+
+tools:
+  get_iban:      {effect: read, allow: {user: true}}
+  get_balance:   {effect: read, allow: {user: true}}
+  get_user_info: {effect: read, allow: {user: true}}
+  get_most_recent_transactions: {effect: read, allow: {user: true}, untrusted_output: {author_field: sender, ref: transaction, id_field: id}}
+  get_scheduled_transactions:   {effect: read, allow: {user: true}, untrusted_output: {author_field: sender, ref: scheduled, id_field: id}}
+  read_file:     {effect: read, allow: {user: true}, untrusted_output: {ref: file}}
+  send_money:                   {effect: write, allow: {user: true}, locked: true}
+  schedule_transaction:         {effect: write, allow: {user: true}, locked: true}
+  update_scheduled_transaction: {effect: write, allow: {user: true}, locked: true}
+  update_password:              {effect: write, allow: {user: true}, locked: true}
+  update_user_info:             {effect: write, allow: {user: true}, locked: true}

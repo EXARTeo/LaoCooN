@@ -1,0 +1,17 @@
+# Installed by deploy/deploy.sh into ~/.config/systemd/user/ (systemd user service; %h = home directory).
+# Restart=always with no start limit: after a reboot it retries until the ZeroTier address exists.
+[Unit]
+Description=Original eClass (bb54fc3) behind the Laocoon proxy
+After=laocoon-proxy.service
+StartLimitIntervalSec=0
+
+[Service]
+Type=simple
+ExecStart=%h/odysseus-server/current/deploy/service.sh eclass
+Environment=PYTHONUNBUFFERED=1
+Restart=always
+RestartSec=5
+TimeoutStopSec=20
+
+[Install]
+WantedBy=default.target

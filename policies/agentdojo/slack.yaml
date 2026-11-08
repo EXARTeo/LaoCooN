@@ -1,0 +1,40 @@
+# Laocoon policy for the AgentDojo "slack" suite (a workspace assistant that reads and posts messages, manages
+# membership and reads/publishes web pages). Same format as policies/eclass.yaml. Written from the tool list
+# alone; no rule names an AgentDojo attacker value.
+#
+#   - one role, `user`; every side effect asks; membership changes and publishing to the web are locked;
+#   - fetching a URL is `external`: the URL itself can carry data out, so it asks like any other egress
+#     (eClass goes further and gives fetch_url to nobody; here the suite's own tasks need the web);
+#   - messages, channel names, member lists and web pages are third-party text: untrusted (G2 + G2b).
+version: 2
+app: agentdojo-slack
+default: deny
+roles: [user]
+
+sensitive_fields: []
+secret_patterns: []
+honey_records: {values: [], visible_to: []}
+
+approvals:
+  defaults: {read: false, write: true, communicate: true, external: true}
+  roles: {}
+
+guard:
+  max_chars: 1500
+  max_chunks: 8
+
+planner:              # plan commitment (opt-in: eval --planner); the harness sets off_plan per simulated human
+  context: "a workspace chat assistant: channels, direct messages, members and web pages"
+
+tools:
+  get_channels:          {effect: read, allow: {user: true}, untrusted_output: {ref: channels}}
+  get_users_in_channel:  {effect: read, allow: {user: true}, untrusted_output: {ref: members}}
+  read_channel_messages: {effect: read, allow: {user: true}, untrusted_output: {author_field: sender, ref: message}}
+  read_inbox:            {effect: read, allow: {user: true}, untrusted_output: {author_field: sender, ref: message}}
+  get_webpage:           {effect: external, allow: {user: true}, untrusted_output: {ref: webpage}}
+  send_direct_message:   {effect: communicate, allow: {user: true}}
+  send_channel_message:  {effect: communicate, allow: {user: true}}
+  add_user_to_channel:   {effect: write, allow: {user: true}, locked: true}
+  invite_user_to_slack:  {effect: write, allow: {user: true}, locked: true}
+  remove_user_from_slack: {effect: write, allow: {user: true}, locked: true}
+  post_webpage:          {effect: external, allow: {user: true}, locked: true}

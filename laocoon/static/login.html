@@ -1,0 +1,176 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex">
+<link rel="icon" type="image/svg+xml" href="__BRAND_ICON__">
+<title data-i18n="title">Sign in · __BRAND__</title>
+<style>
+<!--#include _base.css-->
+body{min-height:100vh}
+.auth{display:grid;grid-template-columns:minmax(0,1.05fr) minmax(360px,1fr);min-height:100vh}
+.auth-art{position:relative;overflow:hidden;background:var(--band);color:var(--band-ink);padding:40px 48px;display:flex;flex-direction:column;
+  justify-content:space-between;isolation:isolate}
+.auth-art .mark-big{position:absolute;right:-9%;top:9%;width:min(64vh,74%);aspect-ratio:1;z-index:-1}
+.auth-art .mark-big svg{width:100%;height:100%;color:var(--band-ink)}
+.auth-art .top{display:flex;align-items:center;gap:12px}
+.auth-art .top svg{width:34px;height:34px;color:var(--band-ink)}
+.wordmark{font:500 20px/1 var(--display);letter-spacing:.14em;text-transform:uppercase}
+.auth-art blockquote{margin:0;max-width:30ch;font:500 clamp(22px,2.6vw,34px)/1.22 var(--display);letter-spacing:-.005em}
+.auth-art blockquote p{margin:0}
+.auth-art figcaption{margin-top:14px;color:var(--band-muted);font-size:13px;max-width:44ch}
+.auth-main{display:flex;flex-direction:column;padding:28px 40px;background:var(--panel)}
+.auth-top{display:flex;justify-content:space-between;align-items:center;gap:12px}
+.auth-top .langswitch{border-color:var(--line-strong)}
+.auth-top .langswitch button{color:var(--muted)}.auth-top .langswitch button+button{border-left-color:var(--line-strong)}
+.auth-top .langswitch button[aria-pressed=true]{background:var(--ink);color:var(--panel)}
+.auth-form{margin:auto 0;width:100%;max-width:380px;align-self:center;padding:32px 0}
+.auth-form h1{font:600 28px/1.15 var(--display)}
+.auth-form .lede{color:var(--muted);margin:8px 0 26px}
+.field{display:flex;flex-direction:column;gap:6px;margin-bottom:16px}
+.field label{font-weight:500;font-size:13px}
+.field input{padding:9px 12px;font-size:15px}
+.auth-form .btn-primary{width:100%;padding:10px 14px;font-size:15px;margin-top:4px}
+.err{color:var(--deny);font-size:13px;min-height:20px;margin:-4px 0 8px}
+.demo{margin-top:22px;padding:12px 14px;border:1px dashed var(--line-strong);border-radius:var(--radius-sm);font-size:13px;color:var(--ink-2)}
+.demo .row{justify-content:space-between;margin-top:8px}
+.demo code{font:12.5px var(--mono);background:var(--bg-subtle);border:1px solid var(--line);border-radius:4px;padding:1px 6px}
+details.alt{margin-top:18px;font-size:13px;color:var(--muted)}
+details.alt summary{cursor:pointer;width:max-content}
+details.alt .row{margin-top:10px;flex-wrap:nowrap}details.alt input{flex:1}
+.auth-foot{color:var(--faint);font-size:12px}
+@media (max-width:860px){
+  .auth{grid-template-columns:1fr;min-height:0}
+  .auth-art{min-height:220px;padding:24px 20px}
+  .auth-art .mark-big{width:190px;right:-56px;top:auto;bottom:-30px}
+  .auth-art blockquote{font-size:20px;max-width:13ch}.auth-art figcaption{display:none}
+  .auth-main{padding:20px 16px}.auth-form{padding:20px 0 28px}
+}
+</style>
+</head>
+<body>
+<main class="auth">
+  <section class="auth-art" aria-hidden="true">
+    <div class="mark-big">__BRAND_ART_RAW__</div>
+    <div class="top">__BRAND_MARK_RAW__<span class="wordmark">__BRAND__</span></div>
+    <figure style="margin:0">
+      <blockquote><p data-i18n="art.quote">Every page an agent reads can be a gift with the enemy inside.</p></blockquote>
+      <figcaption data-i18n="art.caption">Laocoön saw the wooden horse for what it was. __BRAND__ makes sure the model, persuaded or
+        not, cannot open the gates.</figcaption>
+    </figure>
+  </section>
+
+  <section class="auth-main">
+    <div class="auth-top">
+      <a href="#" id="home" data-i18n="home">Back to the home page</a>
+      <div id="topbar-slot"></div>
+    </div>
+
+    <form class="auth-form" id="form" autocomplete="on" novalidate>
+      <h1 data-i18n="h1">Sign in to the console</h1>
+      <p class="lede" data-i18n="lede">Watch every decision about the agent's actions, approve or stop them, and edit the policies.</p>
+      <div class="field">
+        <label for="username" data-i18n="username">Name</label>
+        <input id="username" name="username" autocomplete="username" autocapitalize="off" spellcheck="false" required>
+      </div>
+      <div class="field">
+        <label for="password" data-i18n="password">Password</label>
+        <input id="password" name="password" type="password" autocomplete="current-password" required>
+      </div>
+      <p class="err" id="err" role="alert"></p>
+      <button class="btn btn-primary" id="submit" data-i18n="submit">Sign in</button>
+
+      <div class="demo" id="demo" hidden>
+        <span data-i18n="demo.text">This server uses the built-in demo account. Set LAOCOON_CONSOLE_USERS to replace it.</span>
+        <div class="row"><span><code>admin</code> / <code>laocoon</code></span>
+          <button type="button" class="btn btn-sm" id="demo-fill" data-i18n="demo.fill">Fill in the demo account</button></div>
+      </div>
+
+      <details class="alt" id="alt" hidden>
+        <summary data-i18n="alt.summary">Sign in with the console token instead</summary>
+        <div class="row">
+          <label class="sr-only" for="token" data-i18n="alt.label">Console token</label>
+          <input id="token" type="password" autocomplete="off" placeholder="LAOCOON_CONSOLE_TOKEN">
+          <button type="button" class="btn" id="token-go" data-i18n="alt.go">Use token</button>
+        </div>
+      </details>
+    </form>
+    <div class="auth-foot" data-i18n="foot">The session lasts 12 hours on this browser. Sign out from the header.</div>
+  </section>
+</main>
+<script type="application/json" id="nav-data">__NAV_JSON__</script>
+<script type="application/json" id="login-data">__LOGIN_JSON__</script>
+<script>
+<!--#include _common.js-->
+(function () {
+  const API = "__API_BASE__", NEXT = "__NEXT__";
+  const $ = id => document.getElementById(id);
+  const cfg = JSON.parse($("login-data").textContent || "{}");
+  const {t} = Lcn;
+  delete Lcn.NAV.user;                                   // no "sign in" button on the sign-in page
+
+  Lcn.init({page: "login", dict: {
+    en: {
+      "title": "Sign in · {brand}", "home": "Back to the home page",
+      "art.quote": "Every page an agent reads can be a gift with the enemy inside.",
+      "art.caption": "Laocoön saw the wooden horse for what it was. {brand} makes sure the model, persuaded or not, cannot open the gates.",
+      "h1": "Sign in to the console",
+      "lede": "Watch every decision about the agent's actions, approve or stop them, and edit the policies.",
+      "username": "Name", "password": "Password", "submit": "Sign in", "signing": "Signing in…",
+      "err.empty": "Enter your name and password.", "err.bad": "That name and password do not match an operator account.",
+      "err.badtoken": "That is not the console token.", "err.net": "The server did not answer. Check the connection and try again.",
+      "demo.text": "This server uses the built-in demo account. Set LAOCOON_CONSOLE_USERS to replace it.",
+      "demo.fill": "Fill in the demo account",
+      "alt.summary": "Sign in with the console token instead", "alt.label": "Console token", "alt.go": "Use token",
+      "foot": "The session lasts 12 hours on this browser. Sign out from the header.",
+    },
+    el: {
+      "title": "Σύνδεση · {brand}", "home": "Πίσω στην αρχική",
+      "art.quote": "Κάθε σελίδα που διαβάζει ένας agent μπορεί να είναι δώρο με τον εχθρό μέσα.",
+      "art.caption": "Ο Λαοκόων είδε τον δούρειο ίππο γι' αυτό που ήταν. Το {brand} φροντίζει ώστε το μοντέλο, πεισμένο ή όχι, να μην μπορεί να ανοίξει τις πύλες.",
+      "h1": "Σύνδεση στην κονσόλα",
+      "lede": "Δείτε κάθε απόφαση για τις ενέργειες του agent, εγκρίνετε ή σταματήστε τες και επεξεργαστείτε τις πολιτικές.",
+      "username": "Όνομα", "password": "Κωδικός", "submit": "Σύνδεση", "signing": "Σύνδεση…",
+      "err.empty": "Συμπληρώστε όνομα και κωδικό.", "err.bad": "Το όνομα και ο κωδικός δεν αντιστοιχούν σε λογαριασμό χειριστή.",
+      "err.badtoken": "Αυτό δεν είναι το token της κονσόλας.", "err.net": "Ο διακομιστής δεν απάντησε. Ελέγξτε τη σύνδεση και δοκιμάστε ξανά.",
+      "demo.text": "Ο διακομιστής χρησιμοποιεί τον ενσωματωμένο λογαριασμό επίδειξης. Ορίστε το LAOCOON_CONSOLE_USERS για να τον αντικαταστήσετε.",
+      "demo.fill": "Συμπλήρωση λογαριασμού επίδειξης",
+      "alt.summary": "Σύνδεση με το token της κονσόλας", "alt.label": "Token κονσόλας", "alt.go": "Χρήση token",
+      "foot": "Η σύνδεση διαρκεί 12 ώρες σε αυτόν τον browser. Αποσύνδεση από την κεφαλίδα.",
+    },
+  }});
+
+  $("home").href = Lcn.NAV.home || "/";
+  $("demo").hidden = !cfg.demo;
+  $("alt").hidden = !cfg.token;
+
+  async function signIn(username, password, errKey) {
+    const btn = $("submit"), err = $("err");
+    err.textContent = ""; btn.disabled = true; btn.textContent = t("signing");
+    try {
+      const r = await fetch(API + "/login", {method: "POST", headers: {"Content-Type": "application/json"},
+                                             body: JSON.stringify({username, password, next: NEXT})});
+      const d = await r.json().catch(() => ({}));
+      if (r.ok && d.ok) { location.href = d.next || NEXT; return; }
+      err.textContent = t(errKey);
+    } catch (e) {
+      err.textContent = t("err.net");
+    }
+    btn.disabled = false; btn.textContent = t("submit");
+  }
+
+  $("form").onsubmit = e => {
+    e.preventDefault();
+    const u = $("username").value.trim(), p = $("password").value;
+    if (!u || !p) { $("err").textContent = t("err.empty"); (u ? $("password") : $("username")).focus(); return; }
+    signIn(u, p, "err.bad");
+  };
+  $("demo-fill").onclick = () => { $("username").value = "admin"; $("password").value = "laocoon"; $("submit").focus(); };
+  $("token-go").onclick = () => { const v = $("token").value.trim(); if (v) signIn("token", v, "err.badtoken"); };
+  $("token").onkeydown = e => { if (e.key === "Enter") { e.preventDefault(); $("token-go").click(); } };
+  $("username").focus();
+})();
+</script>
+</body>
+</html>
